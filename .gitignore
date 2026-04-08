@@ -3,9 +3,23 @@
 __pycache__/
 *.pyc
 *.parquet
+.DS_Store
+*.pdf
+
+# Données brutes — non versionnées
 data/bronze/*
 data/silver/*
 data/gold/*
 !data/bronze/.gitkeep
 !data/silver/.gitkeep
 !data/gold/.gitkeep
+
+# Référentiel INSEE — on ne garde que le fichier utile
+data/referentiel/ensemble/donnees_arrondissements.csv
+data/referentiel/ensemble/donnees_cantons.csv
+data/referentiel/ensemble/donnees_collectivites.csv
+data/referentiel/ensemble/donnees_communes_deleguees.csv
+data/referentiel/ensemble/donnees_departements.csv
+data/referentiel/ensemble/donnees_fractions_cantonales.csv
+data/referentiel/ensemble/donnees_regions.csv
+data/referentiel/ensemble/metadonnees.csv
