@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Urban Data Explorer — Paris</title>
+
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+  <link rel="stylesheet" href="../src/components/style.css" />
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <div id="panel">
+    <h2>Urban Data Explorer</h2>
+
+    <div class="control-row">
+      <label for="radius">Rayon</label>
+      <input type="range" id="radius" min="100" max="2000" step="100" value="500" />
+      <span id="radius-label">500 m</span>
+    </div>
+
+    <div id="hint">Cliquez sur la carte pour calculer un score</div>
+
+    <div id="result" class="hidden">
+      <div class="score-block">
+        <span class="score-value" id="score-value">—</span>
+        <span class="score-label">/ 100</span>
+      </div>
+
+      <div class="details">
+        <div class="detail-row">
+          <span>Événements</span>
+          <span id="d-evenements">—</span>
+        </div>
+        <div class="detail-row">
+          <span>Lieux culturels</span>
+          <span id="d-culturels">—</span>
+        </div>
+        <div class="detail-row">
+          <span>Équipements sportifs</span>
+          <span id="d-sport">—</span>
+        </div>
+        <div class="detail-row">
+          <span>Associations</span>
+          <span id="d-associations">—</span>
+        </div>
+      </div>
+
+      <div class="scores-bar">
+        <div class="bar-item">
+          <div class="bar-fill" id="bar-evt"></div>
+          <span>Événements</span>
+        </div>
+        <div class="bar-item">
+          <div class="bar-fill" id="bar-cult"></div>
+          <span>Culture</span>
+        </div>
+        <div class="bar-item">
+          <div class="bar-fill" id="bar-sport"></div>
+          <span>Sport</span>
+        </div>
+        <div class="bar-item">
+          <div class="bar-fill" id="bar-asso"></div>
+          <span>Associations</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="error" class="hidden"></div>
+    <div id="loading" class="hidden">Calcul en cours...</div>
+  </div>
+
+  <script src="../src/map/map.js"></script>
+
+</body>
+</html>
