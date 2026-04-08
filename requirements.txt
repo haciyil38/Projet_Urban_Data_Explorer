@@ -1,0 +1,16 @@
+# Pipeline data
+pandas>=2.0
+numpy>=1.24
+requests>=2.31
+pyarrow>=14.0
+sqlalchemy>=2.0
+psycopg2-binary>=2.9
+geopandas>=0.14
+
+# API backend
+fastapi>=0.110
+uvicorn>=0.29
+python-dotenv>=1.0
+
+# Qualité / tests
+pytest>=8.0
