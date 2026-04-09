@@ -64,14 +64,6 @@ body {
   text-align: right;
 }
 
-/* ── Hint ── */
-#hint {
-  font-size: 0.82rem;
-  color: #888;
-  text-align: center;
-  padding: 12px 0;
-}
-
 /* ── Score block ── */
 .score-block {
   text-align: center;
@@ -149,6 +141,121 @@ body {
   background: #4f46e5;
   border-radius: 4px;
   transition: width 0.4s ease;
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 8px;
+}
+
+.tab {
+  flex: 1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 4px;
+  border: none;
+  background: none;
+  color: #888;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab.active {
+  background: #4f46e5;
+  color: #fff;
+}
+
+/* ── Hint ── */
+.hint {
+  font-size: 0.82rem;
+  color: #888;
+  text-align: center;
+  padding: 12px 0;
+}
+
+/* ── Legend choroplèthe ── */
+.legend {
+  margin-bottom: 12px;
+}
+
+.legend-title {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.legend-gradient {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #dc2626, #f97316, #facc15, #84cc16, #16a34a);
+}
+
+.legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+/* ── Titre arrondissement immobilier ── */
+.immo-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* ── Timeline ── */
+.timeline-title {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 500;
+  margin: 12px 0 4px;
+}
+
+/* ── Layer toggles ── */
+.layers-row {
+  margin-bottom: 16px;
+}
+
+.layers-title {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.layer-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.layer-btn {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 20px;
+  border: 1.5px solid var(--c, #ccc);
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.layer-btn.active {
+  background: var(--c, #ccc);
+  color: #fff;
 }
 
 /* ── States ── */

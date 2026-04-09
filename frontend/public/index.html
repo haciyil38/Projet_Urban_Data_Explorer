@@ -17,56 +17,74 @@
   <div id="panel">
     <h2>Urban Data Explorer</h2>
 
-    <div class="control-row">
-      <label for="radius">Rayon</label>
-      <input type="range" id="radius" min="100" max="2000" step="100" value="500" />
-      <span id="radius-label">500 m</span>
+    <!-- Onglets indicateurs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="culture">Vitalité culturelle</button>
+      <button class="tab" data-tab="immo">Immobilier</button>
     </div>
 
-    <div id="hint">Cliquez sur la carte pour calculer un score</div>
-
-    <div id="result" class="hidden">
-      <div class="score-block">
-        <span class="score-value" id="score-value">—</span>
-        <span class="score-label">/ 100</span>
+    <!-- ── TAB CULTURE ── -->
+    <div id="tab-culture" class="tab-content">
+      <div class="control-row">
+        <label for="radius">Rayon</label>
+        <input type="range" id="radius" min="100" max="2000" step="100" value="500" />
+        <span id="radius-label">500 m</span>
       </div>
 
-      <div class="details">
-        <div class="detail-row">
-          <span>Événements</span>
-          <span id="d-evenements">—</span>
-        </div>
-        <div class="detail-row">
-          <span>Lieux culturels</span>
-          <span id="d-culturels">—</span>
-        </div>
-        <div class="detail-row">
-          <span>Équipements sportifs</span>
-          <span id="d-sport">—</span>
-        </div>
-        <div class="detail-row">
-          <span>Associations</span>
-          <span id="d-associations">—</span>
+      <div class="layers-row">
+        <span class="layers-title">Afficher</span>
+        <div class="layer-toggles">
+          <button class="layer-btn active" data-cat="culturels"    style="--c:#7c3aed">🏛 Culture</button>
+          <button class="layer-btn"        data-cat="evenements"   style="--c:#0891b2">🎭 Événements</button>
+          <button class="layer-btn"        data-cat="sport"        style="--c:#16a34a">⚽ Sport</button>
+          <button class="layer-btn"        data-cat="associations" style="--c:#d97706">🤝 Associations</button>
         </div>
       </div>
 
-      <div class="scores-bar">
-        <div class="bar-item">
-          <div class="bar-fill" id="bar-evt"></div>
-          <span>Événements</span>
+      <div id="hint-culture" class="hint">Cliquez sur la carte pour calculer un score</div>
+
+      <div id="result-culture" class="hidden">
+        <div class="score-block">
+          <span class="score-value" id="score-value">—</span>
+          <span class="score-label">/ 100</span>
         </div>
-        <div class="bar-item">
-          <div class="bar-fill" id="bar-cult"></div>
-          <span>Culture</span>
+        <div class="details">
+          <div class="detail-row"><span>Événements</span><span id="d-evenements">—</span></div>
+          <div class="detail-row"><span>Lieux culturels</span><span id="d-culturels">—</span></div>
+          <div class="detail-row"><span>Équipements sportifs</span><span id="d-sport">—</span></div>
+          <div class="detail-row"><span>Associations</span><span id="d-associations">—</span></div>
         </div>
-        <div class="bar-item">
-          <div class="bar-fill" id="bar-sport"></div>
-          <span>Sport</span>
+        <div class="scores-bar">
+          <div class="bar-item"><div class="bar-fill" id="bar-evt"></div><span>Événements</span></div>
+          <div class="bar-item"><div class="bar-fill" id="bar-cult"></div><span>Culture</span></div>
+          <div class="bar-item"><div class="bar-fill" id="bar-sport"></div><span>Sport</span></div>
+          <div class="bar-item"><div class="bar-fill" id="bar-asso"></div><span>Associations</span></div>
         </div>
-        <div class="bar-item">
-          <div class="bar-fill" id="bar-asso"></div>
-          <span>Associations</span>
+      </div>
+    </div>
+
+    <!-- ── TAB IMMOBILIER ── -->
+    <div id="tab-immo" class="tab-content hidden">
+      <div class="legend">
+        <span class="legend-title">Prix m² médian</span>
+        <div class="legend-gradient" style="background: linear-gradient(to right, #16a34a, #84cc16, #facc15, #f97316, #dc2626)"></div>
+        <div class="legend-labels"><span>7 500 €</span><span>11 000 €</span><span>15 000 €+</span></div>
+      </div>
+
+      <div id="hint-immo" class="hint">Cliquez sur un arrondissement</div>
+
+      <div id="result-immo" class="hidden">
+        <div class="immo-title" id="immo-arr">—</div>
+        <div class="details">
+          <div class="detail-row"><span>Prix m² médian</span><span id="immo-prix">—</span></div>
+          <div class="detail-row"><span>Évolution 1 an</span><span id="immo-evol">—</span></div>
+          <div class="detail-row"><span>Revenu médian</span><span id="immo-revenu">—</span></div>
+          <div class="detail-row"><span>Ratio prix/revenu</span><span id="immo-ratio">—</span></div>
+          <div class="detail-row"><span>Logements sociaux</span><span id="immo-social">—</span></div>
         </div>
+
+        <div class="timeline-title">Évolution prix m² (2020–2024)</div>
+        <canvas id="timeline-chart" height="80"></canvas>
       </div>
     </div>
 
@@ -74,7 +92,9 @@
     <div id="loading" class="hidden">Calcul en cours...</div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="../src/map/map.js"></script>
+  <script src="../src/map/immo.js"></script>
 
 </body>
 </html>

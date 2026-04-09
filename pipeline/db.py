@@ -8,8 +8,18 @@ from sqlalchemy import create_engine, text
 from pipeline.config import DB_URL
 
 
+_engine = None
+
 def get_engine():
-    return create_engine(DB_URL)
+    global _engine
+    if _engine is None:
+        _engine = create_engine(
+            DB_URL,
+            pool_size=5,
+            max_overflow=5,
+            pool_pre_ping=True,
+        )
+    return _engine
 
 
 def init_schemas():

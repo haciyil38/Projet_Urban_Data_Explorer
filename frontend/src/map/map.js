@@ -12,6 +12,15 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl(), "top-left");
 map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
 
+// ── Couleurs par catégorie ─────────────────────────────────────────────────
+
+const CATEGORY_COLORS = {
+  culturels:    "#7c3aed",
+  evenements:   "#0891b2",
+  sport:        "#16a34a",
+  associations: "#d97706",
+};
+
 // ── État ───────────────────────────────────────────────────────────────────
 
 let currentMarker = null;
@@ -22,8 +31,8 @@ let currentRadius = 500;
 
 const radiusInput  = document.getElementById("radius");
 const radiusLabel  = document.getElementById("radius-label");
-const resultDiv    = document.getElementById("result");
-const hintDiv      = document.getElementById("hint");
+const resultDiv    = document.getElementById("result-culture");
+const hintDiv      = document.getElementById("hint-culture");
 const loadingDiv   = document.getElementById("loading");
 const errorDiv     = document.getElementById("error");
 
@@ -156,3 +165,67 @@ function showError(msg) {
 function setLoading(on) {
   loadingDiv.classList.toggle("hidden", !on);
 }
+
+// ── Couches de points ──────────────────────────────────────────────────────
+
+const loadedLayers = new Set();
+const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
+
+async function loadLayer(cat) {
+  if (loadedLayers.has(cat)) {
+    map.setLayoutProperty(`points-${cat}`, "visibility", "visible");
+    return;
+  }
+
+  const res = await fetch(`${API_BASE}/indicators/vitalite-culturelle/points?categorie=${cat}`);
+  const geojson = await res.json();
+
+  map.addSource(`src-${cat}`, { type: "geojson", data: geojson });
+  map.addLayer({
+    id: `points-${cat}`,
+    type: "circle",
+    source: `src-${cat}`,
+    paint: {
+      "circle-radius": 5,
+      "circle-color": CATEGORY_COLORS[cat],
+      "circle-opacity": 0.8,
+      "circle-stroke-width": 1,
+      "circle-stroke-color": "#fff",
+    },
+  });
+
+  // Popup au survol
+  map.on("mouseenter", `points-${cat}`, (e) => {
+    map.getCanvas().style.cursor = "pointer";
+    const label = e.features[0].properties.label || "—";
+    popup.setLngLat(e.lngLat).setHTML(`<strong>${label}</strong>`).addTo(map);
+  });
+  map.on("mouseleave", `points-${cat}`, () => {
+    map.getCanvas().style.cursor = "";
+    popup.remove();
+  });
+
+  loadedLayers.add(cat);
+}
+
+function hideLayer(cat) {
+  if (loadedLayers.has(cat)) {
+    map.setLayoutProperty(`points-${cat}`, "visibility", "none");
+  }
+}
+
+// Initialiser la couche "culturels" active par défaut après chargement carte
+map.on("load", () => loadLayer("culturels"));
+
+// Toggle boutons
+document.querySelectorAll(".layer-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const cat = btn.dataset.cat;
+    const isActive = btn.classList.toggle("active");
+    if (isActive) {
+      loadLayer(cat);
+    } else {
+      hideLayer(cat);
+    }
+  });
+});

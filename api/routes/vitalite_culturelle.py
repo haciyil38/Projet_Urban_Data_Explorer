@@ -50,6 +50,43 @@ def get_score(
     return result
 
 
+@router.get("/points", summary="Points géolocalisés par catégorie (GeoJSON)")
+def get_points(
+    categorie: str = Query(..., description="evenements | culturels | sport | associations"),
+):
+    """
+    Retourne les points silver en GeoJSON pour affichage carte.
+    """
+    table_map = {
+        "evenements":   ("silver.vitalite_points_evenements",  "titre"),
+        "culturels":    ("silver.vitalite_points_culturels",   "nom"),
+        "sport":        ("silver.vitalite_points_sport",       "nom_equipement"),
+        "associations": ("silver.vitalite_points_associations", "titre"),
+    }
+    if categorie not in table_map:
+        raise HTTPException(status_code=400, detail=f"Catégorie inconnue : {categorie}")
+
+    table, label_col = table_map[categorie]
+    try:
+        engine = get_engine()
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(f"SELECT id, {label_col} as label, lat, lon FROM {table} WHERE lat IS NOT NULL")
+            ).fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+    features = [
+        {
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [row.lon, row.lat]},
+            "properties": {"id": row.id, "label": row.label, "categorie": categorie},
+        }
+        for row in rows
+    ]
+    return {"type": "FeatureCollection", "features": features}
+
+
 @router.get("/sources", response_model=SourcesMeta, summary="Metadata des sources silver")
 def get_sources():
     """Retourne le nombre de points géolocalisés par catégorie et la date de dernière mise à jour."""
