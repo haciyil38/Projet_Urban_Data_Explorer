@@ -27,6 +27,13 @@ LIEUX_EXCLUS = {
     "beaubourg", "musée national d'art moderne", "palais de versailles"
 }
 
+# Noms génériques à exclure (bâtiments classés MH mais non-lieux culturels)
+NOMS_GENERIQUES = {
+    "immeuble", "bâtiment", "batiment", "maison", "villa",
+    "hôtel particulier", "hotel particulier", "pavillon", "immeuble d'habitation",
+    "ensemble immobilier", "groupe d'immeubles", "résidence", "residence",
+}
+
 
 def _init_silver_tables():
     """
@@ -169,7 +176,12 @@ def build_silver_points_culturels() -> int:
     df = read_bronze("equipements_culturels")
 
     if "nom" in df.columns:
-        df = df[~df["nom"].str.lower().isin(LIEUX_EXCLUS)]
+        nom_lower = df["nom"].str.lower().str.strip()
+        df = df[~nom_lower.isin(LIEUX_EXCLUS)]
+        df = df[~nom_lower.isin(NOMS_GENERIQUES)]
+        # Exclure aussi les noms qui commencent par ces termes génériques (ex: "Immeuble dit...")
+        pattern = r"^(immeuble|bâtiment|batiment|maison|villa|hôtel particulier|hotel particulier|pavillon|résidence|residence)\b"
+        df = df[~nom_lower.str.match(pattern, na=False)]
 
     df = df.dropna(subset=["latitude", "longitude"])
     df["lat"] = pd.to_numeric(df["latitude"], errors="coerce")

@@ -3,6 +3,9 @@
 let evolutionData = {};
 let timelineChart = null;
 let choroplethLoaded = false;
+let featureById = {};       // id MapLibre → props
+let featureByInsee = {};    // c_arinsee  → { id, props }
+let selectedFeatureId = null;
 
 // Charge les données gold et affiche la choroplèthe
 async function loadChoropleth() {
@@ -18,6 +21,21 @@ async function loadChoropleth() {
 
   // Index évolution par code_insee
   evolution.forEach(d => { evolutionData[d.code_insee] = d.series; });
+
+  // Indexer les features et remplir la liste déroulante
+  geojson.features.forEach((f, i) => {
+    featureById[i]                       = f.properties;
+    featureByInsee[f.properties.c_arinsee] = { id: i, props: f.properties };
+  });
+
+  const select = document.getElementById("arr-select");
+  const sorted = [...geojson.features].sort((a, b) => a.properties.c_arinsee - b.properties.c_arinsee);
+  sorted.forEach(f => {
+    const opt = document.createElement("option");
+    opt.value = f.properties.c_arinsee;
+    opt.textContent = f.properties.l_ar;
+    select.appendChild(opt);
+  });
 
   map.addSource("arrondissements", { type: "geojson", data: geojson });
 
@@ -66,6 +84,18 @@ async function loadChoropleth() {
     },
   }, BEFORE_ROADS);
 
+  // Sélection — contour épais au-dessus de tout (pas de beforeId)
+  map.addLayer({
+    id: "arrondissements-selected",
+    type: "line",
+    source: "arrondissements",
+    paint: {
+      "line-color": "#4f46e5",
+      "line-width": ["case", ["boolean", ["feature-state", "selected"], false], 4, 0],
+      "line-opacity": 1,
+    },
+  });
+
   let hoveredId = null;
 
   map.on("mousemove", "arrondissements-fill", (e) => {
@@ -85,33 +115,32 @@ async function loadChoropleth() {
     hoveredId = null;
   });
 
-  // Clic — affiche le détail
+  // Clic carte — sélectionne et synchronise la liste déroulante
   map.on("click", "arrondissements-fill", (e) => {
     const props = e.features[0].properties;
-    showImmoResult(props);
+    const select = document.getElementById("arr-select");
+    select.value = props.c_arinsee;
+    selectArrondissement(props.c_arinsee);
   });
 
   choroplethLoaded = true;
 }
 
+const CHOROPLETH_LAYERS = ["arrondissements-fill", "arrondissements-outline", "arrondissements-hover", "arrondissements-selected"];
+
 function hideChoropleth() {
   if (!choroplethLoaded) return;
-  ["arrondissements-fill", "arrondissements-outline", "arrondissements-hover"].forEach(id => {
-    map.setLayoutProperty(id, "visibility", "none");
-  });
+  CHOROPLETH_LAYERS.forEach(id => map.setLayoutProperty(id, "visibility", "none"));
 }
 
-function showChoropleth() {
-  if (!choroplethLoaded) { loadChoropleth(); return; }
-  ["arrondissements-fill", "arrondissements-outline", "arrondissements-hover"].forEach(id => {
-    map.setLayoutProperty(id, "visibility", "visible");
-  });
+async function showChoropleth() {
+  if (!choroplethLoaded) { await loadChoropleth(); }
+  CHOROPLETH_LAYERS.forEach(id => map.setLayoutProperty(id, "visibility", "visible"));
 }
 
 // ── Affichage résultat immobilier ─────────────────────────────────────────
 
 function showImmoResult(props) {
-  document.getElementById("hint-immo").classList.add("hidden");
   document.getElementById("result-immo").classList.remove("hidden");
 
   document.getElementById("immo-arr").textContent    = props.l_ar ?? props.c_arinsee;
@@ -164,6 +193,27 @@ function renderTimeline(series) {
   });
 }
 
+// ── Liste déroulante + sélection carte ───────────────────────────────────
+
+function selectArrondissement(insee) {
+  const entry = featureByInsee[insee] || featureByInsee[parseInt(insee)];
+  if (!entry) return;
+
+  // Déselectionner le précédent
+  if (selectedFeatureId !== null) {
+    map.setFeatureState({ source: "arrondissements", id: selectedFeatureId }, { selected: false });
+  }
+  selectedFeatureId = entry.id;
+  map.setFeatureState({ source: "arrondissements", id: selectedFeatureId }, { selected: true });
+
+  showImmoResult(entry.props);
+}
+
+document.getElementById("arr-select").addEventListener("change", (e) => {
+  if (!e.target.value) return;
+  selectArrondissement(e.target.value);
+});
+
 // ── Gestion onglets ───────────────────────────────────────────────────────
 
 document.querySelectorAll(".tab").forEach(btn => {
@@ -183,11 +233,5 @@ document.querySelectorAll(".tab").forEach(btn => {
   });
 });
 
-// Charger la choroplèthe au load de la carte (en arrière-plan)
-map.on("load", () => {
-  // Préchargement silencieux — pas affiché tant que l'onglet est inactif
-  fetch(`${API_BASE}/indicators/immobilier/arrondissements`)
-    .then(r => r.json())
-    .then(() => {})
-    .catch(() => {});
-});
+// Charger et afficher la choroplèthe après le premier rendu complet de la carte
+map.once("idle", () => showChoropleth());

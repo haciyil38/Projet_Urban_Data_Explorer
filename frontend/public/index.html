@@ -19,12 +19,39 @@
 
     <!-- Onglets indicateurs -->
     <div class="tabs">
-      <button class="tab active" data-tab="culture">Vitalité culturelle</button>
-      <button class="tab" data-tab="immo">Immobilier</button>
+      <button class="tab active" data-tab="immo">Immobilier</button>
+      <button class="tab" data-tab="culture">Vitalité culturelle</button>
+    </div>
+
+    <!-- ── TAB IMMOBILIER ── -->
+    <div id="tab-immo" class="tab-content">
+      <div class="legend">
+        <span class="legend-title">Prix m² médian</span>
+        <div class="legend-gradient" style="background: linear-gradient(to right, #16a34a, #84cc16, #facc15, #f97316, #dc2626)"></div>
+        <div class="legend-labels"><span>7 500 €</span><span>11 000 €</span><span>15 000 €+</span></div>
+      </div>
+
+      <select id="arr-select">
+        <option value="">— Choisir un arrondissement —</option>
+      </select>
+
+      <div id="result-immo" class="hidden">
+        <div class="immo-title" id="immo-arr">—</div>
+        <div class="details">
+          <div class="detail-row"><span>Prix m² médian</span><span id="immo-prix">—</span></div>
+          <div class="detail-row"><span>Évolution 1 an</span><span id="immo-evol">—</span></div>
+          <div class="detail-row"><span>Revenu médian</span><span id="immo-revenu">—</span></div>
+          <div class="detail-row"><span>Ratio prix/revenu</span><span id="immo-ratio">—</span></div>
+          <div class="detail-row"><span>Logements sociaux</span><span id="immo-social">—</span></div>
+        </div>
+
+        <div class="timeline-title">Évolution prix m² (2020–2024)</div>
+        <canvas id="timeline-chart" height="80"></canvas>
+      </div>
     </div>
 
     <!-- ── TAB CULTURE ── -->
-    <div id="tab-culture" class="tab-content">
+    <div id="tab-culture" class="tab-content hidden">
       <div class="control-row">
         <label for="radius">Rayon</label>
         <input type="range" id="radius" min="100" max="2000" step="100" value="500" />
@@ -34,10 +61,10 @@
       <div class="layers-row">
         <span class="layers-title">Afficher</span>
         <div class="layer-toggles">
-          <button class="layer-btn active" data-cat="culturels"    style="--c:#7c3aed">🏛 Culture</button>
-          <button class="layer-btn"        data-cat="evenements"   style="--c:#0891b2">🎭 Événements</button>
-          <button class="layer-btn"        data-cat="sport"        style="--c:#16a34a">⚽ Sport</button>
-          <button class="layer-btn"        data-cat="associations" style="--c:#d97706">🤝 Associations</button>
+          <button class="layer-btn" data-cat="culturels"    style="--c:#7c3aed">🏛 Culture</button>
+          <button class="layer-btn" data-cat="evenements"   style="--c:#0891b2">🎭 Événements</button>
+          <button class="layer-btn" data-cat="sport"        style="--c:#16a34a">⚽ Sport</button>
+          <button class="layer-btn" data-cat="associations" style="--c:#d97706">🤝 Associations</button>
         </div>
       </div>
 
@@ -60,31 +87,6 @@
           <div class="bar-item"><div class="bar-fill" id="bar-sport"></div><span>Sport</span></div>
           <div class="bar-item"><div class="bar-fill" id="bar-asso"></div><span>Associations</span></div>
         </div>
-      </div>
-    </div>
-
-    <!-- ── TAB IMMOBILIER ── -->
-    <div id="tab-immo" class="tab-content hidden">
-      <div class="legend">
-        <span class="legend-title">Prix m² médian</span>
-        <div class="legend-gradient" style="background: linear-gradient(to right, #16a34a, #84cc16, #facc15, #f97316, #dc2626)"></div>
-        <div class="legend-labels"><span>7 500 €</span><span>11 000 €</span><span>15 000 €+</span></div>
-      </div>
-
-      <div id="hint-immo" class="hint">Cliquez sur un arrondissement</div>
-
-      <div id="result-immo" class="hidden">
-        <div class="immo-title" id="immo-arr">—</div>
-        <div class="details">
-          <div class="detail-row"><span>Prix m² médian</span><span id="immo-prix">—</span></div>
-          <div class="detail-row"><span>Évolution 1 an</span><span id="immo-evol">—</span></div>
-          <div class="detail-row"><span>Revenu médian</span><span id="immo-revenu">—</span></div>
-          <div class="detail-row"><span>Ratio prix/revenu</span><span id="immo-ratio">—</span></div>
-          <div class="detail-row"><span>Logements sociaux</span><span id="immo-social">—</span></div>
-        </div>
-
-        <div class="timeline-title">Évolution prix m² (2020–2024)</div>
-        <canvas id="timeline-chart" height="80"></canvas>
       </div>
     </div>
 

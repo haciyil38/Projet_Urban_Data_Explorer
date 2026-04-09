@@ -258,6 +258,24 @@ body {
   color: #fff;
 }
 
+/* ── Select arrondissement ── */
+#arr-select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #333;
+  background: #fff;
+  cursor: pointer;
+  margin-bottom: 12px;
+  outline: none;
+}
+
+#arr-select:focus {
+  border-color: #4f46e5;
+}
+
 /* ── States ── */
 .hidden { display: none; }
 

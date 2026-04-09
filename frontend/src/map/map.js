@@ -48,12 +48,16 @@ const barAsso      = document.getElementById("bar-asso");
 
 // ── Rayon ──────────────────────────────────────────────────────────────────
 
+let radiusDebounce = null;
+
 radiusInput.addEventListener("input", () => {
   currentRadius = parseInt(radiusInput.value);
   radiusLabel.textContent = `${currentRadius} m`;
   if (currentMarker) {
     const { lng, lat } = currentMarker.getLngLat();
     updateCircle(lat, lng, currentRadius);
+    clearTimeout(radiusDebounce);
+    radiusDebounce = setTimeout(() => fetchScore(lat, lng, currentRadius), 400);
   }
 });
 
@@ -214,8 +218,7 @@ function hideLayer(cat) {
   }
 }
 
-// Initialiser la couche "culturels" active par défaut après chargement carte
-map.on("load", () => loadLayer("culturels"));
+// Aucune couche chargée par défaut
 
 // Toggle boutons
 document.querySelectorAll(".layer-btn").forEach((btn) => {
