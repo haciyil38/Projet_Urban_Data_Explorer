@@ -10,13 +10,15 @@
 
 import io
 import math
+import time
 
 import pandas as pd
 import requests
 
-_BATCH_URL = "https://api-adresse.data.gouv.fr/search/csv/"
-_CHUNK_SIZE = 5_000   # lignes par requête (marge conservative)
+_BATCH_URL  = "https://api-adresse.data.gouv.fr/search/csv/"
+_CHUNK_SIZE = 2_000   # réduit pour limiter la taille des réponses chunked
 _SCORE_MIN  = 0.4     # seuil de confiance du géocodage (0–1)
+_MAX_RETRY  = 3       # tentatives par chunk en cas d'erreur réseau
 
 
 def geocode_dataframe(
@@ -62,13 +64,23 @@ def geocode_dataframe(
         if col_codepostal:
             params["postcode"] = col_codepostal
 
-        r = requests.post(
-            _BATCH_URL,
-            files={"data": ("adresses.csv", csv_bytes, "text/csv")},
-            data=params,
-            timeout=120,
-        )
-        r.raise_for_status()
+        for attempt in range(_MAX_RETRY):
+            try:
+                r = requests.post(
+                    _BATCH_URL,
+                    files={"data": ("adresses.csv", csv_bytes, "text/csv")},
+                    data=params,
+                    timeout=120,
+                )
+                r.raise_for_status()
+                break
+            except (requests.exceptions.ChunkedEncodingError,
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.Timeout) as e:
+                if attempt == _MAX_RETRY - 1:
+                    raise
+                print(f"\n    [retry {attempt + 1}/{_MAX_RETRY - 1}] Erreur réseau : {e}")
+                time.sleep(5)
 
         chunk_result = pd.read_csv(io.StringIO(r.text))
         results.append(chunk_result)
