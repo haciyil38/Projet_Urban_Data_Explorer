@@ -8,7 +8,7 @@ from pipeline.config import ALLOWED_ORIGINS
 from sqlalchemy import text
 
 from api.security import limiter
-from api.routes import vitalite_culturelle, immobilier
+from api.routes import vitalite_culturelle, immobilier, velib
 
 app = FastAPI(
     title="Urban Data Explorer API",
@@ -30,6 +30,7 @@ app.add_middleware(
 
 app.include_router(vitalite_culturelle.router)
 app.include_router(immobilier.router)
+app.include_router(velib.router)
 
 
 @app.get("/health", tags=["System"], summary="État de l'API")

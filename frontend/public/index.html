@@ -20,7 +20,8 @@
     <!-- Onglets indicateurs -->
     <div class="tabs">
       <button class="tab active" data-tab="immo">Immobilier</button>
-      <button class="tab" data-tab="culture">Vitalité culturelle</button>
+      <button class="tab" data-tab="culture">Culture</button>
+      <button class="tab" data-tab="velib">🚲 Vélib</button>
     </div>
 
     <!-- ── TAB IMMOBILIER ── -->
@@ -90,6 +91,42 @@
       </div>
     </div>
 
+    <!-- ── TAB VÉLIB ── -->
+    <div id="tab-velib" class="tab-content hidden">
+      <div class="control-row">
+        <label for="radius-velib">Rayon</label>
+        <input type="range" id="radius-velib" min="100" max="2000" step="100" value="500" />
+        <span id="radius-velib-label">500 m</span>
+      </div>
+
+      <div class="layers-row">
+        <span class="layers-title">Carte</span>
+        <div class="layer-toggles">
+          <button class="layer-btn" id="btn-velib-layer" data-cat="velib" style="--c:#0284c7">🚲 Stations</button>
+        </div>
+      </div>
+
+      <div id="hint-velib" class="hint">Cliquez sur la carte pour calculer un score</div>
+
+      <div id="result-velib" class="hidden">
+        <div class="score-block">
+          <span class="score-value" id="velib-score-value">—</span>
+          <span class="score-label">/ 100</span>
+        </div>
+        <div class="details">
+          <div class="detail-row"><span>Stations</span><span id="v-nb-stations">—</span></div>
+          <div class="detail-row"><span>Vélos disponibles</span><span id="v-velos-dispo">—</span></div>
+          <div class="detail-row"><span>dont électriques 🔋</span><span id="v-velos-elec">—</span></div>
+          <div class="detail-row"><span>Bornes libres</span><span id="v-bornes-dispo">—</span></div>
+          <div class="detail-row"><span>Taux dispo moyen</span><span id="v-taux">—</span></div>
+        </div>
+        <div class="scores-bar">
+          <div class="bar-item"><div class="bar-fill velib-bar" id="bar-velib-dens"></div><span>Densité</span></div>
+          <div class="bar-item"><div class="bar-fill velib-bar" id="bar-velib-dispo"></div><span>Disponibilité</span></div>
+        </div>
+      </div>
+    </div>
+
     <div id="error" class="hidden"></div>
     <div id="loading" class="hidden">Calcul en cours...</div>
   </div>
@@ -97,6 +134,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="../src/map/map.js"></script>
   <script src="../src/map/immo.js"></script>
+  <script src="../src/map/velib.js"></script>
 
 </body>
 </html>
