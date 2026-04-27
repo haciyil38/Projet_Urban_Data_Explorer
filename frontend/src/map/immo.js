@@ -12,8 +12,8 @@ async function loadChoropleth() {
   if (choroplethLoaded) return;
 
   const [geoRes, evoRes] = await Promise.all([
-    fetch(`${API_BASE}/indicators/immobilier/arrondissements`),
-    fetch(`${API_BASE}/indicators/immobilier/evolution`),
+    fetch(`${API_BASE}/indicators/immobilier/arrondissements`, { headers: API_HEADERS }),
+    fetch(`${API_BASE}/indicators/immobilier/evolution`, { headers: API_HEADERS }),
   ]);
 
   const geojson   = await geoRes.json();

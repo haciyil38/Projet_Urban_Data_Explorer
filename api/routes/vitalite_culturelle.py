@@ -1,11 +1,16 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Request, Depends
 from pydantic import BaseModel
 
 from pipeline.indicators.vitalite_culturelle import compute, setup
 from pipeline.db import get_engine
 from sqlalchemy import text
+from api.security import limiter, require_api_key
 
-router = APIRouter(prefix="/indicators/vitalite-culturelle", tags=["Vitalité Culturelle"])
+router = APIRouter(
+    prefix="/indicators/vitalite-culturelle",
+    tags=["Vitalité Culturelle"],
+    dependencies=[Depends(require_api_key)],
+)
 
 
 class ScoreDetail(BaseModel):
@@ -32,7 +37,9 @@ class SourcesMeta(BaseModel):
 
 
 @router.get("", response_model=ScoreDetail, summary="Score de vitalité culturelle pour un point")
+@limiter.limit("60/minute")
 def get_score(
+    request: Request,
     lat: float = Query(..., ge=48.80, le=48.92, description="Latitude WGS84"),
     lon: float = Query(..., ge=2.20,  le=2.55,  description="Longitude WGS84"),
     radius_m: float = Query(500, ge=100, le=5000, description="Rayon en mètres"),

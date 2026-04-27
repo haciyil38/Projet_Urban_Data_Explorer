@@ -1,4 +1,5 @@
 const API_BASE = "http://localhost:8000";
+const API_HEADERS = { "X-API-Key": "urban-data-explorer-2024" };
 
 // ── Carte ──────────────────────────────────────────────────────────────────
 
@@ -125,7 +126,7 @@ async function fetchScore(lat, lng, radiusM) {
 
   try {
     const url = `${API_BASE}/indicators/vitalite-culturelle?lat=${lat}&lon=${lng}&radius_m=${radiusM}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: API_HEADERS });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     renderResult(data);
@@ -182,7 +183,7 @@ async function loadLayer(cat) {
     return;
   }
 
-  const res = await fetch(`${API_BASE}/indicators/vitalite-culturelle/points?categorie=${cat}`);
+  const res = await fetch(`${API_BASE}/indicators/vitalite-culturelle/points?categorie=${cat}`, { headers: API_HEADERS });
   const geojson = await res.json();
 
   map.addSource(`src-${cat}`, { type: "geojson", data: geojson });

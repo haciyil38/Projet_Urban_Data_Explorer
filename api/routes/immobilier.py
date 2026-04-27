@@ -1,12 +1,17 @@
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Depends
 from sqlalchemy import text
 
 from pipeline.db import get_engine
+from api.security import limiter, require_api_key
 
-router = APIRouter(prefix="/indicators/immobilier", tags=["Immobilier"])
+router = APIRouter(
+    prefix="/indicators/immobilier",
+    tags=["Immobilier"],
+    dependencies=[Depends(require_api_key)],
+)
 
 _GEOJSON_PATH = Path(__file__).parents[2] / "data" / "referentiel" / "arrondissements.geojson"
 
