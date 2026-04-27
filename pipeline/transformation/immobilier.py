@@ -10,7 +10,7 @@
 # =============================================================================
 
 import pandas as pd
-from pipeline.db import get_engine, read_bronze, load_to_silver
+from pipeline.db import get_engine, read_mongo_bronze, load_to_silver
 
 
 def build_silver_prix_m2() -> pd.DataFrame:
@@ -18,7 +18,7 @@ def build_silver_prix_m2() -> pd.DataFrame:
     Calcule le prix au m² médian par arrondissement et par année.
     Filtre les transactions aberrantes (surface < 9m² ou > 500m², prix < 1000€/m²).
     """
-    df = read_bronze("dvf_paris")
+    df = read_mongo_bronze("dvf_paris")
 
     df["valeur_fonciere"]     = pd.to_numeric(df["valeur_fonciere"],     errors="coerce")
     df["surface_reelle_bati"] = pd.to_numeric(df["surface_reelle_bati"], errors="coerce")
@@ -56,7 +56,7 @@ def build_silver_logements_sociaux() -> pd.DataFrame:
     Numérateur  : nb logements sociaux RPLS par arrondissement.
     Dénominateur: nb total logements estimé depuis DVF (proxy) ou INSEE RP.
     """
-    df = read_bronze("logements_sociaux")
+    df = read_mongo_bronze("logements_sociaux")
 
     # Arrondissement depuis DEPCOM (ex: "75101")
     df["code_insee"] = df["DEPCOM"].astype(str).str.strip()
@@ -97,7 +97,7 @@ def build_silver_revenus() -> pd.DataFrame:
     Pivote les données Filosofi : 1 ligne par arrondissement
     avec colonnes revenu_median, d1 (bas revenus), d9 (hauts revenus).
     """
-    df = read_bronze("revenus_insee")
+    df = read_mongo_bronze("revenus_insee")
 
     df["OBS_VALUE"] = pd.to_numeric(df["OBS_VALUE"], errors="coerce")
 
