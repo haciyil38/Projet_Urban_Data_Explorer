@@ -15,6 +15,11 @@ DB_USER     = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
 DB_URL      = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+# --- Base de données MongoDB (Data Lake Bronze) ---
+MONGO_HOST  = os.getenv("MONGO_HOST", "localhost")
+MONGO_PORT  = int(os.getenv("MONGO_PORT", 27017))
+MONGO_URL   = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
+
 # --- Arrondissements Paris (codes INSEE) ---
 ARRONDISSEMENTS = [f"750{str(i).zfill(2)}" for i in range(1, 21)]
 

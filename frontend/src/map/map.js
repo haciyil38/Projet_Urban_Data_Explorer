@@ -64,6 +64,7 @@ radiusInput.addEventListener("input", () => {
 // ── Clic carte ─────────────────────────────────────────────────────────────
 
 map.on("click", (e) => {
+  if (document.getElementById("tab-culture").classList.contains("hidden")) return;
   const { lng, lat } = e.lngLat;
   placeMarker(lat, lng);
   updateCircle(lat, lng, currentRadius);

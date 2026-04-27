@@ -5,7 +5,8 @@
 import json
 import pandas as pd
 from sqlalchemy import create_engine, text
-from pipeline.config import DB_URL
+from pymongo import MongoClient
+from pipeline.config import DB_URL, MONGO_URL
 
 
 _engine = None
@@ -20,6 +21,15 @@ def get_engine():
             pool_pre_ping=True,
         )
     return _engine
+
+
+_mongo_client = None
+
+def get_mongo_client():
+    global _mongo_client
+    if _mongo_client is None:
+        _mongo_client = MongoClient(MONGO_URL, serverSelectionTimeoutMS=5000)
+    return _mongo_client
 
 
 def init_schemas():
@@ -70,9 +80,43 @@ def load_to_bronze(df: pd.DataFrame, table_name: str, if_exists: str = "replace"
     print(f"  → bronze.{table_name} : {len(df)} lignes chargées")
 
 
+def load_to_mongo_bronze(df: pd.DataFrame, collection_name: str, if_exists: str = "replace"):
+    """
+    Charge un DataFrame dans la base MongoDB (Data Lake Bronze).
+    if_exists : 'replace' (écrase la collection) ou 'append' (ajoute des documents)
+    """
+    if df.empty:
+        print(f"  [SKIP] {collection_name} — DataFrame vide")
+        return
+    
+    client = get_mongo_client()
+    db = client["paris_datalake"]
+    collection = db[collection_name]
+    
+    if if_exists == "replace":
+        collection.drop()
+        
+    # Convertit le DataFrame en liste de dictionnaires. Les NaN deviennent None.
+    records = df.where(pd.notnull(df), None).to_dict(orient="records")
+    if records:
+        collection.insert_many(records)
+    print(f"  → mongodb.paris_datalake.{collection_name} : {len(records)} documents chargés")
+
+
 def read_bronze(table_name: str) -> pd.DataFrame:
-    """Lit une table du schéma bronze."""
+    """Lit une table du schéma bronze (PostgreSQL)."""
     return pd.read_sql(f"SELECT * FROM bronze.{table_name}", get_engine())
+
+def read_mongo_bronze(collection_name: str) -> pd.DataFrame:
+    """Lit une collection de la base MongoDB (Data Lake Bronze) et la renvoie en DataFrame Pandas."""
+    client = get_mongo_client()
+    db = client["paris_datalake"]
+    collection = db[collection_name]
+    
+    # On récupère tous les documents (sans l'ID MongoDB `_id` pour que ça ressemble au SQL)
+    cursor = collection.find({}, {"_id": 0})
+    df = pd.DataFrame(list(cursor))
+    return df
 
 
 # --- Helpers Silver ---

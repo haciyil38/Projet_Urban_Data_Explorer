@@ -16,7 +16,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from pipeline.db import init_schemas, load_to_bronze
+from pipeline.db import init_schemas, load_to_mongo_bronze
 
 _BRONZE_DIR = Path(__file__).parents[2] / "data" / "bronze"
 
@@ -190,15 +190,15 @@ def run():
 
     print("\n[1/3] DVF — Transactions immobilières")
     df = fetch_dvf()
-    load_to_bronze(df, "dvf_paris")
+    load_to_mongo_bronze(df, "dvf_paris")
 
     print("\n[2/3] RPLS — Logements sociaux")
     df = fetch_logements_sociaux()
-    load_to_bronze(df, "logements_sociaux")
+    load_to_mongo_bronze(df, "logements_sociaux")
 
     print("\n[3/3] INSEE Filosofi — Revenus médians")
     df = fetch_revenus_insee()
-    load_to_bronze(df, "revenus_insee")
+    load_to_mongo_bronze(df, "revenus_insee")
 
 
 if __name__ == "__main__":
