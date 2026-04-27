@@ -10,13 +10,15 @@
 
 import io
 import math
+import time
 
 import pandas as pd
 import requests
 
 _BATCH_URL = "https://api-adresse.data.gouv.fr/search/csv/"
-_CHUNK_SIZE = 5_000   # lignes par requête (marge conservative)
+_CHUNK_SIZE = 2_000   # réduit pour limiter les réponses chunked trop volumineuses
 _SCORE_MIN  = 0.4     # seuil de confiance du géocodage (0–1)
+_MAX_RETRY  = 3       # tentatives par chunk en cas d'erreur réseau
 
 
 def geocode_dataframe(
@@ -62,13 +64,33 @@ def geocode_dataframe(
         if col_codepostal:
             params["postcode"] = col_codepostal
 
-        r = requests.post(
-            _BATCH_URL,
-            files={"data": ("adresses.csv", csv_bytes, "text/csv")},
-            data=params,
-            timeout=120,
-        )
-        r.raise_for_status()
+        r = None
+        for attempt in range(_MAX_RETRY):
+            try:
+                r = requests.post(
+                    _BATCH_URL,
+                    files={"data": ("adresses.csv", csv_bytes, "text/csv")},
+                    data=params,
+                    timeout=120,
+                )
+                r.raise_for_status()
+                break
+            except (
+                requests.exceptions.ChunkedEncodingError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+            ) as e:
+                if attempt == _MAX_RETRY - 1:
+                    print(f"\n    [WARN] Chunk {i + 1} ignoré après {_MAX_RETRY} échecs réseau: {e}")
+                else:
+                    print(f"\n    [retry {attempt + 1}/{_MAX_RETRY - 1}] Erreur réseau: {e}")
+                    time.sleep(5)
+            except requests.exceptions.HTTPError as e:
+                print(f"\n    [WARN] Chunk {i + 1} ignoré (HTTP): {e}")
+                break
+
+        if r is None or r.status_code >= 400:
+            continue
 
         chunk_result = pd.read_csv(io.StringIO(r.text))
         results.append(chunk_result)
@@ -81,10 +103,18 @@ def geocode_dataframe(
 
     # Filtrer sur le score de confiance et les coordonnées valides
     out = out.rename(columns={
-        "latitude":     "lat",
-        "longitude":    "lon",
+        "result_latitude": "lat",
+        "result_longitude": "lon",
         "result_score": "geocode_score",
     })
+
+    # Compatibilité défensive si certaines réponses contiennent latitude/longitude.
+    if "lat" not in out.columns and "latitude" in out.columns:
+        out["lat"] = out["latitude"]
+    if "lon" not in out.columns and "longitude" in out.columns:
+        out["lon"] = out["longitude"]
+    if "geocode_score" not in out.columns:
+        out["geocode_score"] = 0.0
     out = out[out["geocode_score"] >= _SCORE_MIN]
     out["lat"] = pd.to_numeric(out["lat"], errors="coerce")
     out["lon"] = pd.to_numeric(out["lon"], errors="coerce")

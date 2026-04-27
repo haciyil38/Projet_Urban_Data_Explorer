@@ -29,28 +29,34 @@ echo "  ✓ Base prête"
 if [[ "$1" == "--pipeline" ]]; then
   echo ""
   echo "▶ Pipeline — Vitalité culturelle"
-  .venv/bin/python -m pipeline.ingestion.vitalite_culturelle
-  .venv/bin/python -m pipeline.transformation.vitalite_culturelle
-  .venv/bin/python -m pipeline.indicators.vitalite_culturelle
+  .venv/Scripts/python -m pipeline.ingestion.vitalite_culturelle
+  .venv/Scripts/python -m pipeline.transformation.vitalite_culturelle
+  .venv/Scripts/python -m pipeline.indicators.vitalite_culturelle
 
   echo ""
   echo "▶ Pipeline — Immobilier"
-  .venv/bin/python -m pipeline.ingestion.immobilier
-  .venv/bin/python -m pipeline.transformation.immobilier
-  .venv/bin/python -m pipeline.indicators.immobilier
+  .venv/Scripts/python -m pipeline.ingestion.immobilier
+  .venv/Scripts/python -m pipeline.transformation.immobilier
+  .venv/Scripts/python -m pipeline.indicators.immobilier
+
+  echo ""
+  echo "▶ Pipeline — Accessibilite services"
+  .venv/Scripts/python -m pipeline.ingestion.accessibilite_services
+  .venv/Scripts/python -m pipeline.transformation.accessibilite_services
+  .venv/Scripts/python -m pipeline.indicators.accessibilite_services
 fi
 
 # ── 3. API ────────────────────────────────────────────────────────────────────
 echo ""
 echo "▶ Démarrage API FastAPI (port 8000)..."
-.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000 &
+.venv/Scripts/uvicorn api.main:app --host 0.0.0.0 --port 8000 &
 API_PID=$!
 echo "  ✓ API démarrée (PID $API_PID)"
 
 # ── 4. Frontend ───────────────────────────────────────────────────────────────
 echo ""
 echo "▶ Démarrage frontend (port 8080)..."
-.venv/bin/python -m http.server 8080 --directory . &
+.venv/Scripts/python -m http.server 8080 --directory . &
 FRONT_PID=$!
 echo "  ✓ Frontend démarré (PID $FRONT_PID)"
 

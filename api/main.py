@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pipeline.db import get_engine
 from sqlalchemy import text
 
-from api.routes import vitalite_culturelle, immobilier
+from api.routes import accessibilite_services, immobilier, vitalite_culturelle
 
 app = FastAPI(
     title="Urban Data Explorer API",
@@ -20,6 +20,7 @@ app.add_middleware(
 
 app.include_router(vitalite_culturelle.router)
 app.include_router(immobilier.router)
+app.include_router(accessibilite_services.router)
 
 
 @app.get("/health", tags=["System"], summary="État de l'API")
