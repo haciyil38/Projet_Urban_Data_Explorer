@@ -17,7 +17,7 @@ Dashboard interactif d'indicateurs urbains parisiens, construit sur une architec
 ### 1. Cloner le dépôt
 
 ```bash
-git clone <url-du-repo>
+git clone https://github.com/haciyil38/Projet_Urban_Data_Explorer
 cd "Projet Data Archi"
 ```
 
