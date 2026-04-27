@@ -81,6 +81,22 @@ function placeMarker(lat, lng) {
     .addTo(map);
 }
 
+function hideCultureOverlays() {
+  if (currentMarker) currentMarker.remove();
+  if (map.getSource("radius-circle")) {
+    map.setLayoutProperty("radius-fill",    "visibility", "none");
+    map.setLayoutProperty("radius-outline", "visibility", "none");
+  }
+}
+
+function showCultureOverlays() {
+  if (currentMarker) currentMarker.addTo(map);
+  if (map.getSource("radius-circle")) {
+    map.setLayoutProperty("radius-fill",    "visibility", "visible");
+    map.setLayoutProperty("radius-outline", "visibility", "visible");
+  }
+}
+
 // ── Cercle de rayon ────────────────────────────────────────────────────────
 
 function updateCircle(lat, lng, radiusM) {

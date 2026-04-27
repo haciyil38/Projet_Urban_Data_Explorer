@@ -227,8 +227,10 @@ document.querySelectorAll(".tab").forEach(btn => {
 
     if (tab === "immo") {
       showChoropleth();
+      hideCultureOverlays();
     } else {
       hideChoropleth();
+      showCultureOverlays();
     }
   });
 });

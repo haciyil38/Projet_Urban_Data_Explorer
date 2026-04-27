@@ -11,8 +11,7 @@ import json
 from datetime import datetime, timezone
 
 import pandas as pd
-from pipeline.db import get_engine, read_silver, load_to_gold
-from sqlalchemy import text
+from pipeline.db import read_silver, load_to_mongo_gold
 
 
 def _normalize(series: pd.Series) -> pd.Series:
@@ -110,7 +109,7 @@ def compute_gold_arrondissement() -> pd.DataFrame:
         "computed_at":         datetime.now(timezone.utc).isoformat(),
     })
 
-    load_to_gold(gold, "immo_arrondissement")
+    load_to_mongo_gold(gold, "immo_arrondissement")
 
     print(f"\nGold immobilier — {len(gold)} arrondissements (année réf. {derniere_annee})")
     print(gold[["code_insee", "score", "prix_m2_median", "evolution_1an_pct", "ratio_accessibilite"]]
@@ -129,7 +128,7 @@ def compute_gold_evolution() -> pd.DataFrame:
     gold = df[["code_insee", "annee", "prix_m2_median", "nb_transactions"]].copy()
     gold["computed_at"] = datetime.now(timezone.utc).isoformat()
 
-    load_to_gold(gold, "immo_evolution")
+    load_to_mongo_gold(gold, "immo_evolution")
     print(f"\nGold évolution — {len(gold)} lignes (arrondissement × année)")
     return gold
 

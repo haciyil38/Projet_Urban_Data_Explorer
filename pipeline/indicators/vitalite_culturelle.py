@@ -14,7 +14,8 @@
 # =============================================================================
 
 from sqlalchemy import text
-from pipeline.db import get_engine
+import pandas as pd
+from pipeline.db import get_engine, load_to_mongo_gold
 
 # Surface Paris intra-muros en m² (105,4 km²)
 PARIS_AREA_M2 = 105_400_000.0
@@ -151,9 +152,23 @@ def compute(lat: float, lon: float, radius_m: float = 500) -> dict:
     }
 
 
+def _sync_stats_to_mongo():
+    """Copie les stats de référence Silver vers MongoDB Gold."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        rows = conn.execute(text(
+            "SELECT categorie, total_paris, computed_at FROM silver.vitalite_stats_reference"
+        )).fetchall()
+    if rows:
+        df = pd.DataFrame([{"categorie": r.categorie, "total_paris": r.total_paris,
+                            "computed_at": str(r.computed_at)} for r in rows])
+        load_to_mongo_gold(df, "vitalite_stats_reference")
+
+
 def setup():
-    """Installe la fonction SQL gold (à appeler après la transformation silver)."""
+    """Installe la fonction SQL gold et synchronise les stats vers MongoDB."""
     _create_gold_function()
+    _sync_stats_to_mongo()
 
 
 if __name__ == "__main__":
