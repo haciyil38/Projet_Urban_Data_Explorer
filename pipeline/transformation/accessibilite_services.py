@@ -1,5 +1,5 @@
 """
-TRANSFORMATION — AccessScore
+TRANSFORMATION — AccessScore (V2 - Ultra-Stable)
 Silver : tables de points geospatiaux par categorie de services.
 """
 
@@ -41,6 +41,26 @@ def _init_silver_tables():
         conn.commit()
     print("  Tables silver accessibilite pretes.")
 
+def _find_coord_cols(df):
+    """Cherche intelligemment les colonnes de latitude et longitude."""
+    lat_names = ['latitude', 'lat', 'y', 'lat_wgs84', 'y_wgs84']
+    lon_names = ['longitude', 'lon', 'lng', 'x', 'lon_wgs84', 'x_wgs84']
+    
+    lat_col, lon_col = None, None
+    cols_lower = [c.lower() for c in df.columns]
+    
+    for name in lat_names:
+        if name in cols_lower:
+            lat_col = df.columns[cols_lower.index(name)]
+            break
+            
+    for name in lon_names:
+        if name in cols_lower:
+            lon_col = df.columns[cols_lower.index(name)]
+            break
+            
+    return lat_col, lon_col
+
 def _load_category(category: str) -> int:
     table = TABLES[category]
     bronze_table = f"access_{category}_raw"
@@ -54,41 +74,37 @@ def _load_category(category: str) -> int:
         print(f"  [SKIP] bronze.{bronze_table} vide")
         return 0
 
-    # Mapping flexible des colonnes
-    mapping = {
-        "commerces": {"id": "siret", "nom": "enseigne1Etablissement", "lat": "latitude", "lon": "longitude"},
-        "medecins": {"id": "Identifiant PP", "nom": "Nom d'exercice", "lat": "latitude", "lon": "longitude"},
-        "hopitaux": {"id": "nofinesset", "nom": "rs", "lat": "lat", "lon": "lng"},
-        "ecoles": {"id": "identifiant_de_l_etablissement", "nom": "nom_etablissement", "lat": "latitude", "lon": "longitude"}
-    }
+    # Détection automatique des colonnes
+    lat_col, lon_col = _find_coord_cols(df)
     
-    m = mapping.get(category, {})
-    
-    # Nettoyage et conversion
-    lat_col = m.get("lat") if m.get("lat") in df.columns else "lat"
-    lon_col = m.get("lon") if m.get("lon") in df.columns else "lon"
-    id_col = m.get("id") if m.get("id") in df.columns else df.columns[0]
-    nom_col = m.get("nom") if m.get("nom") in df.columns else None
+    if not lat_col or not lon_col:
+        print(f"  [SKIP] {category} : Colonnes de coordonnées non trouvées dans {df.columns.tolist()}")
+        return 0
 
-    # Conversion forcée
-    df["lat"] = pd.to_numeric(df[lat_col] if lat_col in df.columns else None, errors='coerce')
-    df["lon"] = pd.to_numeric(df[lon_col] if lon_col in df.columns else None, errors='coerce')
-    
-    # Filtrage BBOX Paris
-    # BBOX Paris élargie pour inclure toute la zone urbaine
-    df = df[df["lat"].between(48.0, 49.0) & df["lon"].between(2.0, 3.0)].copy()
+    # Conversion et nettoyage
+    df['lat_clean'] = pd.to_numeric(df[lat_col], errors='coerce')
+    df['lon_clean'] = pd.to_numeric(df[lon_col], errors='coerce')
+    df = df.dropna(subset=['lat_clean', 'lon_clean'])
+
+    # Filtrage BBOX Paris élargie (IDF)
+    df = df[df["lat_clean"].between(48.0, 49.0) & df["lon_clean"].between(2.0, 3.0)].copy()
     
     if df.empty:
-        print(f"  [SKIP] {category} : Aucun point dans la BBOX Paris")
+        print(f"  [SKIP] {category} : Aucun point dans la BBOX (Zone: {lat_col}/{lon_col})")
         return 0
+
+    # Préparation des lignes pour l'insertion
+    # On cherche une colonne de nom de manière flexible
+    nom_cols = [c for c in df.columns if 'nom' in c.lower() or 'enseigne' in c.lower() or 'rs' in c.lower() or 'etablissement' in c.lower()]
+    nom_col = nom_cols[0] if nom_cols else df.columns[0]
 
     rows = []
     for _, row in df.iterrows():
         rows.append({
-            "id": str(row[id_col]),
-            "nom": str(row[nom_col]) if nom_col and nom_col in df.columns else "Inconnu",
-            "lat": float(row["lat"]),
-            "lon": float(row["lon"]),
+            "id": str(row.iloc[0]), # On prend la 1ere col comme ID par défaut
+            "nom": str(row[nom_col])[:200] if nom_col in df.columns else "Inconnu",
+            "lat": float(row["lat_clean"]),
+            "lon": float(row["lon_clean"]),
             "source": category
         })
 
