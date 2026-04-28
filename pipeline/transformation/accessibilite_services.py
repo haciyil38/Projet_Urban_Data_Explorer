@@ -75,7 +75,8 @@ def _load_category(category: str) -> int:
     df["lon"] = pd.to_numeric(df[lon_col] if lon_col in df.columns else None, errors='coerce')
     
     # Filtrage BBOX Paris
-    df = df[df["lat"].between(48.80, 48.92) & df["lon"].between(2.20, 2.55)].copy()
+    # BBOX Paris élargie pour inclure toute la zone urbaine
+    df = df[df["lat"].between(48.0, 49.0) & df["lon"].between(2.0, 3.0)].copy()
     
     if df.empty:
         print(f"  [SKIP] {category} : Aucun point dans la BBOX Paris")
