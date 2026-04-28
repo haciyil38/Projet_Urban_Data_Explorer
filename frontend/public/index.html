@@ -21,6 +21,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="immo">Immobilier</button>
       <button class="tab" data-tab="culture">Vitalité culturelle</button>
+      <button class="tab" data-tab="access">Accessibilité</button>
     </div>
 
     <!-- ── TAB IMMOBILIER ── -->
@@ -86,6 +87,48 @@
           <div class="bar-item"><div class="bar-fill" id="bar-cult"></div><span>Culture</span></div>
           <div class="bar-item"><div class="bar-fill" id="bar-sport"></div><span>Sport</span></div>
           <div class="bar-item"><div class="bar-fill" id="bar-asso"></div><span>Associations</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB ACCESS ── -->
+    <div id="tab-access" class="tab-content hidden">
+      <div class="control-row">
+        <label for="profile-select">Profil</label>
+        <select id="profile-select">
+          <option value="standard">Standard</option>
+          <option value="famille">Famille</option>
+          <option value="senior">Senior</option>
+          <option value="actif">Actif</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <label for="radius-access">Rayon</label>
+        <input type="range" id="radius-access" min="100" max="2000" step="100" value="1000" />
+        <span id="radius-access-label">1000 m</span>
+      </div>
+
+      <div id="hint-access" class="hint">Cliquez sur la carte pour voir l'accessibilité</div>
+
+      <div id="result-access" class="hidden">
+        <div class="score-block">
+          <span class="score-value" id="score-access-value">—</span>
+          <span class="score-label">/ 100</span>
+        </div>
+        
+        <div class="details">
+          <div class="detail-row"><span>Commerces (alim.)</span><span id="d-access-commerces">—</span></div>
+          <div class="detail-row"><span>Médecins gén.</span><span id="d-access-medecins">—</span></div>
+          <div class="detail-row"><span>Hôpitaux/Urgen.</span><span id="d-access-hopitaux">—</span></div>
+          <div class="detail-row"><span>Écoles (mat/élém)</span><span id="d-access-ecoles">—</span></div>
+        </div>
+
+        <div class="scores-bar">
+          <div class="bar-item"><div class="bar-fill" id="bar-access-com" style="background:#16a34a"></div><span>Commerces</span></div>
+          <div class="bar-item"><div class="bar-fill" id="bar-access-med" style="background:#dc2626"></div><span>Santé</span></div>
+          <div class="bar-item"><div class="bar-fill" id="bar-access-hop" style="background:#0891b2"></div><span>Hôpitaux</span></div>
+          <div class="bar-item"><div class="bar-fill" id="bar-access-eco" style="background:#facc15"></div><span>Écoles</span></div>
         </div>
       </div>
     </div>

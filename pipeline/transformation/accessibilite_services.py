@@ -1,12 +1,11 @@
 """
-TRANSFORMATION — AccessScore
-Silver : tables de points geospatiaux par categorie de services.
+TRANSFORMATION — AccessScore (V3 - Static Version)
+Silver : tables de points geospatiaux basées sur les CSV standardisés.
 """
 
 from sqlalchemy import text
-
 from pipeline.db import get_engine, read_bronze
-
+import pandas as pd
 
 TABLES = {
     "commerces": "silver.access_points_commerces",
@@ -15,10 +14,10 @@ TABLES = {
     "ecoles": "silver.access_points_ecoles",
 }
 
-
 def _init_silver_tables():
     engine = get_engine()
     with engine.connect() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS silver"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
         for category, table in TABLES.items():
             conn.execute(
@@ -42,7 +41,6 @@ def _init_silver_tables():
         conn.commit()
     print("  Tables silver accessibilite pretes.")
 
-
 def _load_category(category: str) -> int:
     table = TABLES[category]
     bronze_table = f"access_{category}_raw"
@@ -56,26 +54,25 @@ def _load_category(category: str) -> int:
         print(f"  [SKIP] bronze.{bronze_table} vide")
         return 0
 
-    # Nettoyage minimal + bbox Paris
-    for col in ("lat", "lon"):
-        df[col] = df[col].astype(float)
-    df = df[
-        df["lat"].between(48.80, 48.92) &
-        df["lon"].between(2.20, 2.55)
-    ].copy()
-    id_col = "id" if "id" in df.columns else df.columns[0]
-    df = df.drop_duplicates(subset=[id_col, "lat", "lon"])
+    # Nos fichiers CSV standardisés utilisent 'latitude' et 'longitude'
+    lat_col = 'latitude' if 'latitude' in df.columns else 'lat'
+    lon_col = 'longitude' if 'longitude' in df.columns else 'lon'
+    nom_col = 'nom' if 'nom' in df.columns else df.columns[1]
 
-    rows = [
-        {
-            "id": str(row[id_col]),
-            "nom": row["nom"] if "nom" in df.columns else None,
-            "lat": float(row["lat"]),
-            "lon": float(row["lon"]),
-            "source": row["source"] if "source" in df.columns else None,
-        }
-        for _, row in df.iterrows()
-    ]
+    # Conversion et nettoyage
+    df['lat_clean'] = pd.to_numeric(df[lat_col], errors='coerce')
+    df['lon_clean'] = pd.to_numeric(df[lon_col], errors='coerce')
+    df = df.dropna(subset=['lat_clean', 'lon_clean'])
+
+    rows = []
+    for _, row in df.iterrows():
+        rows.append({
+            "id": str(row.iloc[0]),
+            "nom": str(row[nom_col])[:200],
+            "lat": float(row["lat_clean"]),
+            "lon": float(row["lon_clean"]),
+            "source": category
+        })
 
     engine = get_engine()
     with engine.connect() as conn:
@@ -93,25 +90,13 @@ def _load_category(category: str) -> int:
     print(f"    {len(rows)} points silver pour {category}")
     return len(rows)
 
-
 def run():
     print("Silver [0/5] Initialisation tables...")
     _init_silver_tables()
-
-    print("Silver [1/4] Commerces...")
-    _load_category("commerces")
-
-    print("Silver [2/4] Medecins...")
-    _load_category("medecins")
-
-    print("Silver [3/4] Hopitaux...")
-    _load_category("hopitaux")
-
-    print("Silver [4/4] Ecoles...")
-    _load_category("ecoles")
-
+    for cat in TABLES.keys():
+        print(f"Silver - Traitement {cat}...")
+        _load_category(cat)
     print("\nTransformation Silver accessibilite terminee.")
-
 
 if __name__ == "__main__":
     run()
