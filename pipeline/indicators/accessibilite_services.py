@@ -1,131 +1,123 @@
 """
-INDICATEUR — AccessScore
-Gold : calcul a la demande pour un point (lat, lon) avec distance decay.
+INDICATEUR — AccessScore (V3 - Radius Support)
+Calcul du score final dans la couche Gold avec support du rayon.
 """
 
 from sqlalchemy import text
-
-from pipeline.config import LAMBDA_ACCESS, WEIGHTS_ACCESS
 from pipeline.db import get_engine
+from pipeline.config import LAMBDA_ACCESS, WEIGHTS_ACCESS
 
-
-def _create_gold_function():
-    sql = f"""
-    CREATE OR REPLACE FUNCTION gold.score_accessibilite_services(
-        p_lat DOUBLE PRECISION,
-        p_lon DOUBLE PRECISION,
-        p_profile TEXT DEFAULT 'standard'
-    )
-    RETURNS TABLE (
-        score DOUBLE PRECISION,
-        distance_commerces_m DOUBLE PRECISION,
-        distance_medecins_m DOUBLE PRECISION,
-        distance_hopitaux_m DOUBLE PRECISION,
-        distance_ecoles_m DOUBLE PRECISION,
-        score_commerces DOUBLE PRECISION,
-        score_medecins DOUBLE PRECISION,
-        score_hopitaux DOUBLE PRECISION,
-        score_ecoles DOUBLE PRECISION
-    )
-    LANGUAGE plpgsql
-    AS $$
-    DECLARE
-        pt GEOGRAPHY := ST_SetSRID(ST_MakePoint(p_lon, p_lat), 4326)::GEOGRAPHY;
-        d_com DOUBLE PRECISION;
-        d_med DOUBLE PRECISION;
-        d_hop DOUBLE PRECISION;
-        d_eco DOUBLE PRECISION;
-        s_com DOUBLE PRECISION;
-        s_med DOUBLE PRECISION;
-        s_hop DOUBLE PRECISION;
-        s_eco DOUBLE PRECISION;
-        s_total DOUBLE PRECISION;
-        w_com DOUBLE PRECISION := {WEIGHTS_ACCESS["commerces"]};
-        w_med DOUBLE PRECISION := {WEIGHTS_ACCESS["medecins"]};
-        w_hop DOUBLE PRECISION := {WEIGHTS_ACCESS["hopitaux"]};
-        w_eco DOUBLE PRECISION := {WEIGHTS_ACCESS["ecoles"]};
-    BEGIN
-        IF lower(p_profile) = 'famille' THEN
-            w_com := 0.20; w_med := 0.25; w_hop := 0.20; w_eco := 0.35;
-        ELSIF lower(p_profile) = 'senior' THEN
-            w_com := 0.15; w_med := 0.40; w_hop := 0.30; w_eco := 0.15;
-        ELSIF lower(p_profile) = 'actif' THEN
-            w_com := 0.35; w_med := 0.30; w_hop := 0.30; w_eco := 0.05;
-        END IF;
-
-        SELECT COALESCE(MIN(ST_Distance(geom::GEOGRAPHY, pt)), 100000.0)
-          INTO d_com FROM silver.access_points_commerces;
-        SELECT COALESCE(MIN(ST_Distance(geom::GEOGRAPHY, pt)), 100000.0)
-          INTO d_med FROM silver.access_points_medecins;
-        SELECT COALESCE(MIN(ST_Distance(geom::GEOGRAPHY, pt)), 100000.0)
-          INTO d_hop FROM silver.access_points_hopitaux;
-        SELECT COALESCE(MIN(ST_Distance(geom::GEOGRAPHY, pt)), 100000.0)
-          INTO d_eco FROM silver.access_points_ecoles;
-
-        s_com := exp(-{LAMBDA_ACCESS["commerces"]} * d_com);
-        s_med := exp(-{LAMBDA_ACCESS["medecins"]} * d_med);
-        s_hop := exp(-{LAMBDA_ACCESS["hopitaux"]} * d_hop);
-        s_eco := exp(-{LAMBDA_ACCESS["ecoles"]} * d_eco);
-
-        s_total := ROUND((
-            s_com * w_com +
-            s_med * w_med +
-            s_hop * w_hop +
-            s_eco * w_eco
-        )::NUMERIC * 100.0, 2);
-
-        RETURN QUERY
-        SELECT
-            s_total,
-            ROUND(d_com::NUMERIC, 2)::DOUBLE PRECISION,
-            ROUND(d_med::NUMERIC, 2)::DOUBLE PRECISION,
-            ROUND(d_hop::NUMERIC, 2)::DOUBLE PRECISION,
-            ROUND(d_eco::NUMERIC, 2)::DOUBLE PRECISION,
-            ROUND(s_com::NUMERIC, 4)::DOUBLE PRECISION,
-            ROUND(s_med::NUMERIC, 4)::DOUBLE PRECISION,
-            ROUND(s_hop::NUMERIC, 4)::DOUBLE PRECISION,
-            ROUND(s_eco::NUMERIC, 4)::DOUBLE PRECISION;
-    END;
-    $$;
-    """
+def _init_gold_function():
     engine = get_engine()
     with engine.connect() as conn:
-        conn.execute(text(sql))
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS gold"))
+        
+        # Fonction SQL pour calculer le score avec décroissance exponentielle et limite de rayon
+        conn.execute(text(f"""
+            CREATE OR REPLACE FUNCTION gold.score_accessibilite_services(
+                target_lat DOUBLE PRECISION, 
+                target_lon DOUBLE PRECISION, 
+                profile TEXT,
+                max_radius DOUBLE PRECISION DEFAULT 1000.0
+            )
+            RETURNS TABLE (
+                score DOUBLE PRECISION,
+                dist_com DOUBLE PRECISION,
+                dist_med DOUBLE PRECISION,
+                dist_hop DOUBLE PRECISION,
+                dist_eco DOUBLE PRECISION,
+                score_com DOUBLE PRECISION,
+                score_med DOUBLE PRECISION,
+                score_hop DOUBLE PRECISION,
+                score_eco DOUBLE PRECISION
+            ) AS $$
+            DECLARE
+                p_geom GEOMETRY := ST_SetSRID(ST_MakePoint(target_lon, target_lat), 4326);
+                d_com DOUBLE PRECISION;
+                d_med DOUBLE PRECISION;
+                d_hop DOUBLE PRECISION;
+                d_eco DOUBLE PRECISION;
+                s_com DOUBLE PRECISION;
+                s_med DOUBLE PRECISION;
+                s_hop DOUBLE PRECISION;
+                s_eco DOUBLE PRECISION;
+                final_score DOUBLE PRECISION;
+                w_com DOUBLE PRECISION;
+                w_med DOUBLE PRECISION;
+                w_hop DOUBLE PRECISION;
+                w_eco DOUBLE PRECISION;
+            BEGIN
+                -- Récupération des poids selon le profil
+                IF profile = 'famille' THEN
+                    w_com := {WEIGHTS_ACCESS['famille']['commerces']};
+                    w_med := {WEIGHTS_ACCESS['famille']['medecins']};
+                    w_hop := {WEIGHTS_ACCESS['famille']['hopitaux']};
+                    w_eco := {WEIGHTS_ACCESS['famille']['ecoles']};
+                ELSIF profile = 'senior' THEN
+                    w_com := {WEIGHTS_ACCESS['senior']['commerces']};
+                    w_med := {WEIGHTS_ACCESS['senior']['medecins']};
+                    w_hop := {WEIGHTS_ACCESS['senior']['hopitaux']};
+                    w_eco := {WEIGHTS_ACCESS['senior']['ecoles']};
+                ELSIF profile = 'actif' THEN
+                    w_com := {WEIGHTS_ACCESS['actif']['commerces']};
+                    w_med := {WEIGHTS_ACCESS['actif']['medecins']};
+                    w_hop := {WEIGHTS_ACCESS['actif']['hopitaux']};
+                    w_eco := {WEIGHTS_ACCESS['actif']['ecoles']};
+                ELSE
+                    w_com := {WEIGHTS_ACCESS['standard']['commerces']};
+                    w_med := {WEIGHTS_ACCESS['standard']['medecins']};
+                    w_hop := {WEIGHTS_ACCESS['standard']['hopitaux']};
+                    w_eco := {WEIGHTS_ACCESS['standard']['ecoles']};
+                END IF;
+
+                -- Calcul des distances minimales (en metres)
+                SELECT COALESCE(MIN(ST_Distance(geom::geography, p_geom::geography)), 100000) INTO d_com FROM silver.access_points_commerces;
+                SELECT COALESCE(MIN(ST_Distance(geom::geography, p_geom::geography)), 100000) INTO d_med FROM silver.access_points_medecins;
+                SELECT COALESCE(MIN(ST_Distance(geom::geography, p_geom::geography)), 100000) INTO d_hop FROM silver.access_points_hopitaux;
+                SELECT COALESCE(MIN(ST_Distance(geom::geography, p_geom::geography)), 100000) INTO d_eco FROM silver.access_points_ecoles;
+
+                -- Application du rayon : si distance > max_radius, le score de la categorie est 0
+                s_com := CASE WHEN d_com <= max_radius THEN EXP(-{LAMBDA_ACCESS['commerces']} * d_com) ELSE 0 END;
+                s_med := CASE WHEN d_med <= max_radius THEN EXP(-{LAMBDA_ACCESS['medecins']} * d_med) ELSE 0 END;
+                s_hop := CASE WHEN d_hop <= max_radius THEN EXP(-{LAMBDA_ACCESS['hopitaux']} * d_hop) ELSE 0 END;
+                s_eco := CASE WHEN d_eco <= max_radius THEN EXP(-{LAMBDA_ACCESS['ecoles']} * d_eco) ELSE 0 END;
+
+                final_score := (s_com * w_com + s_med * w_med + s_hop * w_hop + s_eco * w_eco) * 100;
+
+                RETURN QUERY SELECT final_score, d_com, d_med, d_hop, d_eco, s_com, s_med, s_hop, s_eco;
+            END;
+            $$ LANGUAGE plpgsql;
+        """))
         conn.commit()
-    print("  Fonction gold.score_accessibilite_services creee.")
+    print("  Fonction gold.score_accessibilite_services avec support rayon creee.")
 
-
-def compute(lat: float, lon: float, profile: str = "standard") -> dict:
-    # Normalisation du profil en minuscules
+def compute(lat: float, lon: float, profile: str = "standard", radius: float = 1000.0) -> dict:
     profile = profile.lower()
     engine = get_engine()
     with engine.connect() as conn:
         row = conn.execute(
-            text("SELECT * FROM gold.score_accessibilite_services(:lat, :lon, :profile)"),
-            {"lat": lat, "lon": lon, "profile": profile},
+            text("SELECT * FROM gold.score_accessibilite_services(:lat, :lon, :profile, :radius)"),
+            {"lat": lat, "lon": lon, "profile": profile, "radius": radius},
         ).fetchone()
 
     return {
         "lat": lat,
         "lon": lon,
         "profile": profile,
-        "score": float(row.score),
-        "distance_commerces_m": float(row.distance_commerces_m),
-        "distance_medecins_m": float(row.distance_medecins_m),
-        "distance_hopitaux_m": float(row.distance_hopitaux_m),
-        "distance_ecoles_m": float(row.distance_ecoles_m),
-        "score_commerces": float(row.score_commerces),
-        "score_medecins": float(row.score_medecins),
-        "score_hopitaux": float(row.score_hopitaux),
-        "score_ecoles": float(row.score_ecoles),
+        "radius": radius,
+        "score": round(row[0], 1),
+        "distance_commerces_m": round(row[1], 1),
+        "distance_medecins_m": round(row[2], 1),
+        "distance_hopitaux_m": round(row[3], 1),
+        "distance_ecoles_m": round(row[4], 1),
+        "score_commerces": round(row[5], 4),
+        "score_medecins": round(row[6], 4),
+        "score_hopitaux": round(row[7], 4),
+        "score_ecoles": round(row[8], 4),
     }
 
-
-def setup():
-    _create_gold_function()
-
+def run():
+    _init_gold_function()
 
 if __name__ == "__main__":
-    setup()
-    result = compute(lat=48.8566, lon=2.3522, profile="standard")
-    print(result)
+    run()

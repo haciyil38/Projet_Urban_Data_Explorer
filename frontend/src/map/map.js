@@ -1,5 +1,5 @@
 // ── Config ─────────────────────────────────────────────────────────────────
-const API_BASE = "https://8000-i05hf4z5kat7286s0apxj-0653cabd.us1.manus.computer";
+const API_BASE = "http://localhost:8000";
 
 const CATEGORY_COLORS = {
   culturels: "#7c3aed",
@@ -10,15 +10,20 @@ const CATEGORY_COLORS = {
 
 // ── État ───────────────────────────────────────────────────────────────────
 let currentMarker = null;
-let currentRadius = 500;
+let currentRadiusCulture = 500;
+let currentRadiusAccess = 1000;
 let currentProfile = "standard";
 let activeTab = "immo";
 
 // ── DOM ────────────────────────────────────────────────────────────────────
-const mapDiv = document.getElementById("map");
-const radiusInput = document.getElementById("radius");
-const radiusLabel = document.getElementById("radius-label");
+const radiusInputCulture = document.getElementById("radius");
+const radiusLabelCulture = document.getElementById("radius-label");
+
+const radiusInputAccess = document.getElementById("radius-access");
+const radiusLabelAccess = document.getElementById("radius-access-label");
+
 const profileSelect = document.getElementById("profile-select");
+
 const resultDiv = document.getElementById("result-culture");
 const scoreVal = document.getElementById("score-value");
 const dEvt = document.getElementById("d-evenements");
@@ -55,12 +60,25 @@ const map = new maplibregl.Map({
 });
 
 // ── Événements ─────────────────────────────────────────────────────────────
-radiusInput.addEventListener("input", (e) => {
-  currentRadius = parseInt(e.target.value);
-  radiusLabel.textContent = `${currentRadius} m`;
-  if (currentMarker) {
+
+// Slider Culture
+radiusInputCulture.addEventListener("input", (e) => {
+  currentRadiusCulture = parseInt(e.target.value);
+  radiusLabelCulture.textContent = `${currentRadiusCulture} m`;
+  if (currentMarker && activeTab === "culture") {
     const { lng, lat } = currentMarker.getLngLat();
-    updateCircle(lat, lng, currentRadius);
+    updateCircle(lat, lng, currentRadiusCulture);
+    debouncedFetch(lat, lng);
+  }
+});
+
+// Slider Accessibilité
+radiusInputAccess.addEventListener("input", (e) => {
+  currentRadiusAccess = parseInt(e.target.value);
+  radiusLabelAccess.textContent = `${currentRadiusAccess} m`;
+  if (currentMarker && activeTab === "access") {
+    const { lng, lat } = currentMarker.getLngLat();
+    updateCircle(lat, lng, currentRadiusAccess);
     debouncedFetch(lat, lng);
   }
 });
@@ -69,7 +87,7 @@ profileSelect.addEventListener("change", (e) => {
   currentProfile = e.target.value;
   if (currentMarker) {
     const { lng, lat } = currentMarker.getLngLat();
-    fetchAccessScore(lat, lng, currentProfile);
+    fetchAccessScore(lat, lng, currentProfile, currentRadiusAccess);
   }
 });
 
@@ -77,8 +95,8 @@ let debounceTimer = null;
 function debouncedFetch(lat, lng) {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
-    if (activeTab === "culture") fetchCultureScore(lat, lng, currentRadius);
-    if (activeTab === "access") fetchAccessScore(lat, lng, currentProfile);
+    if (activeTab === "culture") fetchCultureScore(lat, lng, currentRadiusCulture);
+    if (activeTab === "access") fetchAccessScore(lat, lng, currentProfile, currentRadiusAccess);
   }, 400);
 }
 
@@ -87,10 +105,11 @@ map.on("click", (e) => {
   placeMarker(lat, lng);
   
   if (activeTab === "culture") {
-    updateCircle(lat, lng, currentRadius);
-    fetchCultureScore(lat, lng, currentRadius);
+    updateCircle(lat, lng, currentRadiusCulture);
+    fetchCultureScore(lat, lng, currentRadiusCulture);
   } else if (activeTab === "access") {
-    fetchAccessScore(lat, lng, currentProfile);
+    updateCircle(lat, lng, currentRadiusAccess);
+    fetchAccessScore(lat, lng, currentProfile, currentRadiusAccess);
   }
 });
 
@@ -120,6 +139,11 @@ function updateCircle(lat, lng, radiusM) {
       source: "radius-circle",
       paint: { "line-color": "#4f46e5", "line-width": 2, "line-dasharray": [3, 2] },
     });
+  }
+  // S'assurer que le cercle est visible
+  if (map.getLayer("radius-fill")) {
+    map.setLayoutProperty("radius-fill", "visibility", "visible");
+    map.setLayoutProperty("radius-outline", "visibility", "visible");
   }
 }
 
@@ -167,10 +191,10 @@ function renderCultureResult(data) {
 }
 
 // ── API AccessScore ────────────────────────────────────────────────────────
-async function fetchAccessScore(lat, lng, profile) {
+async function fetchAccessScore(lat, lng, profile, radiusM) {
   setLoading(true);
   try {
-    const url = `${API_BASE}/indicators/accessibilite-services?lat=${lat}&lon=${lng}&profile=${profile}`;
+    const url = `${API_BASE}/indicators/accessibilite-services?lat=${lat}&lon=${lng}&profile=${profile}&radius=${radiusM}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -190,10 +214,10 @@ function renderAccessResult(data) {
   scoreAccessVal.textContent = data.score.toFixed(1);
   scoreAccessVal.style.color = scoreColor(data.score);
   
-  dAccCom.textContent = `${Math.round(data.distance_commerces_m)} m`;
-  dAccMed.textContent = `${Math.round(data.distance_medecins_m)} m`;
-  dAccHop.textContent = `${Math.round(data.distance_hopitaux_m)} m`;
-  dAccEco.textContent = `${Math.round(data.distance_ecoles_m)} m`;
+  dAccCom.textContent = data.distance_commerces_m > data.radius ? "Hors rayon" : `${Math.round(data.distance_commerces_m)} m`;
+  dAccMed.textContent = data.distance_medecins_m > data.radius ? "Hors rayon" : `${Math.round(data.distance_medecins_m)} m`;
+  dAccHop.textContent = data.distance_hopitaux_m > data.radius ? "Hors rayon" : `${Math.round(data.distance_hopitaux_m)} m`;
+  dAccEco.textContent = data.distance_ecoles_m > data.radius ? "Hors rayon" : `${Math.round(data.distance_ecoles_m)} m`;
   
   barAccCom.style.setProperty("--pct", `${data.score_commerces * 100}%`);
   barAccMed.style.setProperty("--pct", `${data.score_medecins * 100}%`);
@@ -219,26 +243,37 @@ function setLoading(on) {
   loadingDiv.classList.toggle("hidden", !on);
 }
 
-// ── Gestion Onglets (Surcharge immo.js) ───────────────────────────────────
+// ── Gestion Onglets ───────────────────────────────────
 map.on('load', () => {
   document.querySelectorAll(".tab").forEach(btn => {
     btn.addEventListener("click", () => {
+      // Retirer la classe active de tous les onglets
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      // Ajouter la classe active sur l'onglet cliqué
+      btn.classList.add("active");
+      
       activeTab = btn.dataset.tab;
       
-      // Nettoyage cercle si on quitte culture
-      if (activeTab !== "culture" && map.getLayer("radius-fill")) {
-        map.setLayoutProperty("radius-fill", "visibility", "none");
-        map.setLayoutProperty("radius-outline", "visibility", "none");
-      } else if (activeTab === "culture" && map.getLayer("radius-fill")) {
-        map.setLayoutProperty("radius-fill", "visibility", "visible");
-        map.setLayoutProperty("radius-outline", "visibility", "visible");
-      }
+      // Gérer l'affichage des contenus d'onglets
+      document.querySelectorAll(".tab-content").forEach(content => {
+        content.classList.add("hidden");
+      });
+      document.getElementById(`tab-${activeTab}`).classList.remove("hidden");
       
-      // Si on a un marker, on relance le calcul pour le nouvel onglet
-      if (currentMarker) {
-        const { lng, lat } = currentMarker.getLngLat();
-        if (activeTab === "culture") fetchCultureScore(lat, lng, currentRadius);
-        if (activeTab === "access") fetchAccessScore(lat, lng, currentProfile);
+      // Gérer le cercle de rayon
+      if (activeTab === "immo") {
+        if (map.getLayer("radius-fill")) {
+          map.setLayoutProperty("radius-fill", "visibility", "none");
+          map.setLayoutProperty("radius-outline", "visibility", "none");
+        }
+      } else {
+        const r = (activeTab === "culture") ? currentRadiusCulture : currentRadiusAccess;
+        if (currentMarker) {
+          const { lng, lat } = currentMarker.getLngLat();
+          updateCircle(lat, lng, r);
+          if (activeTab === "culture") fetchCultureScore(lat, lng, r);
+          if (activeTab === "access") fetchAccessScore(lat, lng, currentProfile, r);
+        }
       }
     });
   });
