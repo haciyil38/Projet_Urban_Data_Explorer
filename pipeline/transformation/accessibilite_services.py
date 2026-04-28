@@ -1,6 +1,6 @@
 """
-TRANSFORMATION — AccessScore (V2 - Ultra-Stable)
-Silver : tables de points geospatiaux par categorie de services.
+TRANSFORMATION — AccessScore (V3 - Static Version)
+Silver : tables de points geospatiaux basées sur les CSV standardisés.
 """
 
 from sqlalchemy import text
@@ -41,26 +41,6 @@ def _init_silver_tables():
         conn.commit()
     print("  Tables silver accessibilite pretes.")
 
-def _find_coord_cols(df):
-    """Cherche intelligemment les colonnes de latitude et longitude."""
-    lat_names = ['latitude', 'lat', 'y', 'lat_wgs84', 'y_wgs84']
-    lon_names = ['longitude', 'lon', 'lng', 'x', 'lon_wgs84', 'x_wgs84']
-    
-    lat_col, lon_col = None, None
-    cols_lower = [c.lower() for c in df.columns]
-    
-    for name in lat_names:
-        if name in cols_lower:
-            lat_col = df.columns[cols_lower.index(name)]
-            break
-            
-    for name in lon_names:
-        if name in cols_lower:
-            lon_col = df.columns[cols_lower.index(name)]
-            break
-            
-    return lat_col, lon_col
-
 def _load_category(category: str) -> int:
     table = TABLES[category]
     bronze_table = f"access_{category}_raw"
@@ -74,35 +54,21 @@ def _load_category(category: str) -> int:
         print(f"  [SKIP] bronze.{bronze_table} vide")
         return 0
 
-    # Détection automatique des colonnes
-    lat_col, lon_col = _find_coord_cols(df)
-    
-    if not lat_col or not lon_col:
-        print(f"  [SKIP] {category} : Colonnes de coordonnées non trouvées dans {df.columns.tolist()}")
-        return 0
+    # Nos fichiers CSV standardisés utilisent 'latitude' et 'longitude'
+    lat_col = 'latitude' if 'latitude' in df.columns else 'lat'
+    lon_col = 'longitude' if 'longitude' in df.columns else 'lon'
+    nom_col = 'nom' if 'nom' in df.columns else df.columns[1]
 
     # Conversion et nettoyage
     df['lat_clean'] = pd.to_numeric(df[lat_col], errors='coerce')
     df['lon_clean'] = pd.to_numeric(df[lon_col], errors='coerce')
     df = df.dropna(subset=['lat_clean', 'lon_clean'])
 
-    # Filtrage BBOX Paris élargie (IDF)
-    df = df[df["lat_clean"].between(48.0, 49.0) & df["lon_clean"].between(2.0, 3.0)].copy()
-    
-    if df.empty:
-        print(f"  [SKIP] {category} : Aucun point dans la BBOX (Zone: {lat_col}/{lon_col})")
-        return 0
-
-    # Préparation des lignes pour l'insertion
-    # On cherche une colonne de nom de manière flexible
-    nom_cols = [c for c in df.columns if 'nom' in c.lower() or 'enseigne' in c.lower() or 'rs' in c.lower() or 'etablissement' in c.lower()]
-    nom_col = nom_cols[0] if nom_cols else df.columns[0]
-
     rows = []
     for _, row in df.iterrows():
         rows.append({
-            "id": str(row.iloc[0]), # On prend la 1ere col comme ID par défaut
-            "nom": str(row[nom_col])[:200] if nom_col in df.columns else "Inconnu",
+            "id": str(row.iloc[0]),
+            "nom": str(row[nom_col])[:200],
             "lat": float(row["lat_clean"]),
             "lon": float(row["lon_clean"]),
             "source": category
