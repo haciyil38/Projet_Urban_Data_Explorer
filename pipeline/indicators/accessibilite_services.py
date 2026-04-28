@@ -1,5 +1,5 @@
 """
-INDICATEUR — AccessScore (V3 - Radius Support)
+INDICATEUR — AccessScore (V4 - Fixed Config & Radius Support)
 Calcul du score final dans la couche Gold avec support du rayon.
 """
 
@@ -13,6 +13,7 @@ def _init_gold_function():
         conn.execute(text("CREATE SCHEMA IF NOT EXISTS gold"))
         
         # Fonction SQL pour calculer le score avec décroissance exponentielle et limite de rayon
+        # Note : On utilise les poids fixes de config.py pour l'instant pour éviter les erreurs de clés.
         conn.execute(text(f"""
             CREATE OR REPLACE FUNCTION gold.score_accessibilite_services(
                 target_lat DOUBLE PRECISION, 
@@ -42,33 +43,32 @@ def _init_gold_function():
                 s_hop DOUBLE PRECISION;
                 s_eco DOUBLE PRECISION;
                 final_score DOUBLE PRECISION;
-                w_com DOUBLE PRECISION;
-                w_med DOUBLE PRECISION;
-                w_hop DOUBLE PRECISION;
-                w_eco DOUBLE PRECISION;
+                w_com DOUBLE PRECISION := {WEIGHTS_ACCESS['commerces']};
+                w_med DOUBLE PRECISION := {WEIGHTS_ACCESS['medecins']};
+                w_hop DOUBLE PRECISION := {WEIGHTS_ACCESS['hopitaux']};
+                w_eco DOUBLE PRECISION := {WEIGHTS_ACCESS['ecoles']};
             BEGIN
-                -- Récupération des poids selon le profil
+                -- Ajustement dynamique des poids selon le profil (Logique simplifiee)
                 IF profile = 'famille' THEN
-                    w_com := {WEIGHTS_ACCESS['famille']['commerces']};
-                    w_med := {WEIGHTS_ACCESS['famille']['medecins']};
-                    w_hop := {WEIGHTS_ACCESS['famille']['hopitaux']};
-                    w_eco := {WEIGHTS_ACCESS['famille']['ecoles']};
+                    w_eco := w_eco * 1.5;
+                    w_med := w_med * 0.8;
                 ELSIF profile = 'senior' THEN
-                    w_com := {WEIGHTS_ACCESS['senior']['commerces']};
-                    w_med := {WEIGHTS_ACCESS['senior']['medecins']};
-                    w_hop := {WEIGHTS_ACCESS['senior']['hopitaux']};
-                    w_eco := {WEIGHTS_ACCESS['senior']['ecoles']};
+                    w_med := w_med * 1.5;
+                    w_hop := w_hop * 1.2;
                 ELSIF profile = 'actif' THEN
-                    w_com := {WEIGHTS_ACCESS['actif']['commerces']};
-                    w_med := {WEIGHTS_ACCESS['actif']['medecins']};
-                    w_hop := {WEIGHTS_ACCESS['actif']['hopitaux']};
-                    w_eco := {WEIGHTS_ACCESS['actif']['ecoles']};
-                ELSE
-                    w_com := {WEIGHTS_ACCESS['standard']['commerces']};
-                    w_med := {WEIGHTS_ACCESS['standard']['medecins']};
-                    w_hop := {WEIGHTS_ACCESS['standard']['hopitaux']};
-                    w_eco := {WEIGHTS_ACCESS['standard']['ecoles']};
+                    w_com := w_com * 1.3;
+                    w_eco := w_eco * 0.5;
                 END IF;
+
+                -- Normalisation des poids
+                DECLARE
+                    total_w DOUBLE PRECISION := w_com + w_med + w_hop + w_eco;
+                BEGIN
+                    w_com := w_com / total_w;
+                    w_med := w_med / total_w;
+                    w_hop := w_hop / total_w;
+                    w_eco := w_eco / total_w;
+                END;
 
                 -- Calcul des distances minimales (en metres)
                 SELECT COALESCE(MIN(ST_Distance(geom::geography, p_geom::geography)), 100000) INTO d_com FROM silver.access_points_commerces;
@@ -89,7 +89,7 @@ def _init_gold_function():
             $$ LANGUAGE plpgsql;
         """))
         conn.commit()
-    print("  Fonction gold.score_accessibilite_services avec support rayon creee.")
+    print("  Fonction gold.score_accessibilite_services mise a jour avec succes.")
 
 def compute(lat: float, lon: float, profile: str = "standard", radius: float = 1000.0) -> dict:
     profile = profile.lower()
