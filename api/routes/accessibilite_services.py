@@ -26,11 +26,10 @@ class AccessScoreDetail(BaseModel):
 
 @router.get("", response_model=AccessScoreDetail, summary="AccessScore pour un point")
 def get_access_score(
-    lat: float = Query(..., ge=48.80, le=48.92, description="Latitude WGS84"),
-    lon: float = Query(..., ge=2.20, le=2.55, description="Longitude WGS84"),
+    lat: float = Query(..., description="Latitude WGS84"),
+    lon: float = Query(..., description="Longitude WGS84"),
     profile: str = Query(
         "standard",
-        pattern="^(standard|famille|senior|actif)$",
         description="Profil de ponderation: standard | famille | senior | actif",
     ),
 ):

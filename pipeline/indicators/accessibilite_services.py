@@ -96,6 +96,8 @@ def _create_gold_function():
 
 
 def compute(lat: float, lon: float, profile: str = "standard") -> dict:
+    # Normalisation du profil en minuscules
+    profile = profile.lower()
     engine = get_engine()
     with engine.connect() as conn:
         row = conn.execute(
