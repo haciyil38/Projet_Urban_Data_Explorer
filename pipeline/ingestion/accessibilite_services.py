@@ -1,33 +1,39 @@
 """
-INGESTION — AccessScore (V6 - Static Version)
-Lecture des fichiers standardises stockes dans le repo (data/static/).
+INGESTION — AccessScore (V7 - GitHub Hosted Version)
+Utilise les donnees standardisees hebergees sur le GitHub de l'utilisateur.
 """
 
-import os
 import pandas as pd
+import requests
+import io
 from pipeline.db import init_schemas, load_to_bronze
 
-# Chemins locaux vers les fichiers standardises
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-STATIC_DATA_DIR = os.path.join(BASE_DIR, "data", "static")
+# URLs RAW de votre propre fork GitHub (DZjeff05)
+# Ces fichiers sont garantis stables en format et en contenu.
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/DZjeff05/Projet_Urban_Data_Explorer/dev-score-access/data/static"
 
-FILES = {
-    "commerces": os.path.join(STATIC_DATA_DIR, "commerces_paris.csv"),
-    "medecins": os.path.join(STATIC_DATA_DIR, "medecins_paris.csv"),
-    "hopitaux": os.path.join(STATIC_DATA_DIR, "hopitaux_paris.csv"),
-    "ecoles": os.path.join(STATIC_DATA_DIR, "ecoles_paris.csv")
+URLS = {
+    "commerces": f"{GITHUB_RAW_BASE}/commerces_paris.csv",
+    "medecins": f"{GITHUB_RAW_BASE}/medecins_paris.csv",
+    "hopitaux": f"{GITHUB_RAW_BASE}/hopitaux_paris.csv",
+    "ecoles": f"{GITHUB_RAW_BASE}/ecoles_paris.csv"
 }
 
 def run():
     init_schemas()
     
-    for name, path in FILES.items():
-        print(f"Ingestion {name} depuis {path}...")
-        if os.path.exists(path):
-            df = pd.read_csv(path)
-            load_to_bronze(df, f"access_{name}_raw")
-        else:
-            print(f"  [ERR] Fichier introuvable: {path}")
+    for name, url in URLS.items():
+        print(f"Ingestion {name} depuis GitHub...")
+        try:
+            r = requests.get(url, timeout=20)
+            if r.status_code == 200:
+                df = pd.read_csv(io.BytesIO(r.content))
+                load_to_bronze(df, f"access_{name}_raw")
+                print(f"  ✓ {len(df)} lignes chargees.")
+            else:
+                print(f"  [ERR] Impossible d'acceder au fichier sur GitHub (HTTP {r.status_code})")
+        except Exception as e:
+            print(f"  [ERR] {name}: {e}")
 
 if __name__ == "__main__":
     run()
