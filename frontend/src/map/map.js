@@ -73,8 +73,47 @@ map.on("click", (e) => {
   placeMarker(lat, lng);
   updateCircle(lat, lng, currentRadius);
 
-  if (activeTab === "culture") fetchScore(lat, lng, currentRadius);
-  else if (activeTab === "velib") fetchVelib(lat, lng, currentRadius);
+  if (activeTab === "culture")        fetchScore(lat, lng, currentRadius);
+  else if (activeTab === "velib")    fetchVelib(lat, lng, currentRadius);
+  else if (activeTab === "canicule") fetchCanicule(lat, lng, currentRadius);
+  else if (activeTab === "access")   fetchAccess(lat, lng, currentRadius);
+
+  fetchAllScores(lat, lng, currentRadius);
+});
+
+// ── Scores résumé (toujours visibles) ─────────────────────────────────────
+
+async function fetchAllScores(lat, lng, radiusM) {
+  const urls = [
+    `${API_BASE}/indicators/vitalite-culturelle?lat=${lat}&lon=${lng}&radius_m=${radiusM}`,
+    `${API_BASE}/indicators/velib?lat=${lat}&lon=${lng}&radius_m=${radiusM}`,
+    `${API_BASE}/indicators/canicule?lat=${lat}&lon=${lng}&radius_m=${radiusM}`,
+    `${API_BASE}/indicators/accessibilite-services?lat=${lat}&lon=${lng}&radius=${radiusM}`,
+  ];
+  const ids = ["sum-culture", "sum-velib", "sum-canicule", "sum-access"];
+
+  const results = await Promise.allSettled(
+    urls.map(url => fetch(url, { headers: API_HEADERS }).then(r => r.ok ? r.json() : Promise.reject(r.status)))
+  );
+
+  results.forEach((res, i) => {
+    const el = document.getElementById(ids[i]);
+    if (res.status === "fulfilled") {
+      const score = res.value.score;
+      el.textContent = score.toFixed(1);
+      el.style.color = scoreColor(score);
+      el.classList.add("loaded");
+    }
+  });
+}
+
+// Clic sur une carte résumé → active l'onglet correspondant
+document.querySelectorAll(".summary-card").forEach(card => {
+  card.addEventListener("click", () => {
+    const tab = card.dataset.tab;
+    const btn = document.querySelector(`.tab[data-tab="${tab}"]`);
+    if (btn) btn.click();
+  });
 });
 
 // ── Marker ─────────────────────────────────────────────────────────────────

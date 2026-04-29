@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,6 +11,7 @@
 
   <link rel="stylesheet" href="../src/components/style.css" />
 </head>
+
 <body>
 
   <div id="map"></div>
@@ -17,18 +19,41 @@
   <div id="panel">
     <h2>Urban Data Explorer</h2>
 
+    <!-- Cartes de score — toujours visibles -->
+    <div id="scores-summary">
+      <div class="summary-card" data-tab="culture" style="--card-c:#7c3aed">
+        <div class="summary-label">🎭 Culture</div>
+        <div class="summary-score" id="sum-culture">—</div>
+      </div>
+      <div class="summary-card" data-tab="velib" style="--card-c:#0284c7">
+        <div class="summary-label">🚲 Vélib</div>
+        <div class="summary-score" id="sum-velib">—</div>
+      </div>
+      <div class="summary-card" data-tab="canicule" style="--card-c:#f97316">
+        <div class="summary-label">🌡 Canicule</div>
+        <div class="summary-score" id="sum-canicule">—</div>
+      </div>
+      <div class="summary-card" data-tab="access" style="--card-c:#0891b2">
+        <div class="summary-label">🏥 Accès</div>
+        <div class="summary-score" id="sum-access">—</div>
+      </div>
+    </div>
+
     <!-- Onglets indicateurs -->
     <div class="tabs">
       <button class="tab active" data-tab="immo">Immobilier</button>
       <button class="tab" data-tab="culture">Culture</button>
-      <button class="tab" data-tab="velib">🚲 Vélib</button>
+      <button class="tab" data-tab="velib">Vélib</button>
+      <button class="tab" data-tab="canicule">Canicule</button>
+      <button class="tab" data-tab="access">Accès</button>
     </div>
 
     <!-- ── TAB IMMOBILIER ── -->
     <div id="tab-immo" class="tab-content">
       <div class="legend">
         <span class="legend-title">Prix m² médian</span>
-        <div class="legend-gradient" style="background: linear-gradient(to right, #16a34a, #84cc16, #facc15, #f97316, #dc2626)"></div>
+        <div class="legend-gradient"
+          style="background: linear-gradient(to right, #16a34a, #84cc16, #facc15, #f97316, #dc2626)"></div>
         <div class="legend-labels"><span>7 500 €</span><span>11 000 €</span><span>15 000 €+</span></div>
       </div>
 
@@ -62,9 +87,9 @@
       <div class="layers-row">
         <span class="layers-title">Afficher</span>
         <div class="layer-toggles">
-          <button class="layer-btn" data-cat="culturels"    style="--c:#7c3aed">🏛 Culture</button>
-          <button class="layer-btn" data-cat="evenements"   style="--c:#0891b2">🎭 Événements</button>
-          <button class="layer-btn" data-cat="sport"        style="--c:#16a34a">⚽ Sport</button>
+          <button class="layer-btn" data-cat="culturels" style="--c:#7c3aed">🏛 Culture</button>
+          <button class="layer-btn" data-cat="evenements" style="--c:#0891b2">🎭 Événements</button>
+          <button class="layer-btn" data-cat="sport" style="--c:#16a34a">⚽ Sport</button>
           <button class="layer-btn" data-cat="associations" style="--c:#d97706">🤝 Associations</button>
         </div>
       </div>
@@ -83,10 +108,18 @@
           <div class="detail-row"><span>Associations</span><span id="d-associations">—</span></div>
         </div>
         <div class="scores-bar">
-          <div class="bar-item"><div class="bar-fill" id="bar-evt"></div><span>Événements</span></div>
-          <div class="bar-item"><div class="bar-fill" id="bar-cult"></div><span>Culture</span></div>
-          <div class="bar-item"><div class="bar-fill" id="bar-sport"></div><span>Sport</span></div>
-          <div class="bar-item"><div class="bar-fill" id="bar-asso"></div><span>Associations</span></div>
+          <div class="bar-item">
+            <div class="bar-fill" id="bar-evt"></div><span>Événements</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill" id="bar-cult"></div><span>Culture</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill" id="bar-sport"></div><span>Sport</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill" id="bar-asso"></div><span>Associations</span>
+          </div>
         </div>
       </div>
     </div>
@@ -121,8 +154,106 @@
           <div class="detail-row"><span>Taux dispo moyen</span><span id="v-taux">—</span></div>
         </div>
         <div class="scores-bar">
-          <div class="bar-item"><div class="bar-fill velib-bar" id="bar-velib-dens"></div><span>Densité</span></div>
-          <div class="bar-item"><div class="bar-fill velib-bar" id="bar-velib-dispo"></div><span>Disponibilité</span></div>
+          <div class="bar-item">
+            <div class="bar-fill velib-bar" id="bar-velib-dens"></div><span>Densité</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill velib-bar" id="bar-velib-dispo"></div><span>Disponibilité</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB CANICULE ── -->
+    <div id="tab-canicule" class="tab-content hidden">
+      <div class="control-row">
+        <label for="radius-canicule">Rayon</label>
+        <input type="range" id="radius-canicule" min="100" max="2000" step="100" value="500" />
+        <span id="radius-canicule-label">500 m</span>
+      </div>
+
+      <div class="layers-row">
+        <span class="layers-title">Afficher</span>
+        <div class="layer-toggles">
+          <button class="layer-btn" data-canicule-cat="ilots-equipements" style="--c:#f97316">🏊 Équipements</button>
+          <button class="layer-btn" data-canicule-cat="espaces-verts"     style="--c:#16a34a">🌳 Espaces verts</button>
+          <button class="layer-btn" data-canicule-cat="fontaines"         style="--c:#3b82f6">💧 Fontaines</button>
+        </div>
+      </div>
+
+      <div id="hint-canicule" class="hint">Cliquez sur la carte pour calculer un score</div>
+
+      <div id="result-canicule" class="hidden">
+        <div class="score-block">
+          <span class="score-value" id="canicule-score">—</span>
+          <span class="score-label">/ 100</span>
+        </div>
+        <div class="details">
+          <div class="detail-row"><span>Refuges frais dans le rayon</span><span id="canicule-refuges">—</span></div>
+          <div class="detail-row"><span>dont fontaines à boire</span><span id="canicule-fontaines">—</span></div>
+          <div class="detail-row"><span>dont îlots équipements</span><span id="canicule-equip">—</span></div>
+          <div class="detail-row"><span>dont espaces verts frais</span><span id="canicule-verts">—</span></div>
+          <div class="detail-row"><span>Arbres (arrondissement)</span><span id="canicule-arbres">—</span></div>
+          <div class="detail-row"><span>Temp. surface estivale (LST)</span><span id="canicule-lst">—</span></div>
+        </div>
+        <div class="scores-bar">
+          <div class="bar-item">
+            <div class="bar-fill canicule-bar" id="bar-canicule-refuges"></div><span>Refuges frais (35%)</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill canicule-bar" id="bar-canicule-arboree"></div><span>Couverture arborée (35%)</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill canicule-bar" id="bar-canicule-lst"></div><span>Fraîcheur LST (30%)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB ACCÈS ── -->
+    <div id="tab-access" class="tab-content hidden">
+      <div class="control-row">
+        <label for="profile-select">Profil</label>
+        <select id="profile-select">
+          <option value="standard">Standard</option>
+          <option value="famille">Famille 👨‍👩‍👧</option>
+          <option value="senior">Senior 🧓</option>
+          <option value="actif">Actif 🏃</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <label for="radius-access">Rayon</label>
+        <input type="range" id="radius-access" min="100" max="2000" step="100" value="1000" />
+        <span id="radius-access-label">1000 m</span>
+      </div>
+
+      <div id="hint-access" class="hint">Cliquez sur la carte pour calculer un score</div>
+
+      <div id="result-access" class="hidden">
+        <div class="score-block">
+          <span class="score-value" id="access-score-value">—</span>
+          <span class="score-label">/ 100</span>
+        </div>
+        <div class="details">
+          <div class="detail-row"><span>Commerces aliment.</span><span id="access-d-commerces">—</span></div>
+          <div class="detail-row"><span>Médecins / centres</span><span id="access-d-medecins">—</span></div>
+          <div class="detail-row"><span>Hôpitaux / urgences</span><span id="access-d-hopitaux">—</span></div>
+          <div class="detail-row"><span>Écoles mat./élém.</span><span id="access-d-ecoles">—</span></div>
+        </div>
+        <div class="scores-bar">
+          <div class="bar-item">
+            <div class="bar-fill access-bar" id="bar-access-commerces" style="--c:#16a34a"></div><span>Commerces</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill access-bar" id="bar-access-medecins" style="--c:#0891b2"></div><span>Médecins</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill access-bar" id="bar-access-hopitaux" style="--c:#dc2626"></div><span>Hôpitaux</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill access-bar" id="bar-access-ecoles" style="--c:#7c3aed"></div><span>Écoles</span>
+          </div>
         </div>
       </div>
     </div>
@@ -135,6 +266,9 @@
   <script src="../src/map/map.js"></script>
   <script src="../src/map/immo.js"></script>
   <script src="../src/map/velib.js"></script>
+  <script src="../src/map/canicule.js"></script>
+  <script src="../src/map/access.js"></script>
 
 </body>
+
 </html>

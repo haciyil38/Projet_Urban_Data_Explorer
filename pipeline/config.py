@@ -61,11 +61,12 @@ WEIGHTS_ACCESS = {
 
 # =============================================================================
 # INDICATEUR 3 — Indice de Confort Caniculaire
+# Sources : îlots fraîcheur équipements + espaces verts frais + fontaines + arbres
 # =============================================================================
 WEIGHTS_CANICULAIRE = {
-    "refuges_frais":      0.35,
-    "couverture_arboree": 0.35,
-    "lst":                0.30,
+    "refuges_frais":      0.35,   # îlots équipements + espaces verts frais + fontaines
+    "couverture_arboree": 0.35,   # arbres géolocalisés (densité × circonférence)
+    "lst":                0.30,   # température de surface estivale ERA5-Land (Copernicus)
 }
 
 # =============================================================================

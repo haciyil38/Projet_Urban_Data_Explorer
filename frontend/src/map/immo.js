@@ -226,15 +226,28 @@ document.querySelectorAll(".tab").forEach(btn => {
     activeTab = tab;
     document.getElementById(`tab-${tab}`).classList.remove("hidden");
 
+    // Highlight de la carte résumé correspondante
+    document.querySelectorAll(".summary-card").forEach(c => c.classList.remove("active"));
+    const activeCard = document.querySelector(`.summary-card[data-tab="${tab}"]`);
+    if (activeCard) activeCard.classList.add("active");
+
     if (tab === "immo") {
       showChoropleth();
       hideCultureOverlays();
     } else {
       hideChoropleth();
       showCultureOverlays();
+      // Rafraîchir le score automatiquement si un point est déjà placé
+      if (currentMarker) {
+        const { lng, lat } = currentMarker.getLngLat();
+        if (tab === "culture")        fetchScore(lat, lng, currentRadius);
+        else if (tab === "velib")    fetchVelib(lat, lng, currentRadius);
+        else if (tab === "canicule") fetchCanicule(lat, lng, currentRadius);
+        else if (tab === "access")   fetchAccess(lat, lng, currentRadius);
+      }
     }
 
-    // Masquer marker/cercle si on revient sur immo (pas de clic-sur-carte)
+    // Masquer marker/cercle si on revient sur immo
     if (tab === "immo" && currentMarker) {
       currentMarker.remove();
       currentMarker = null;
