@@ -295,13 +295,3 @@ Toutes les routes sont protégées par :
 ```
 
 ---
-
-## Contributeurs
-
-| Indicateur | Auteur |
-|---|---|
-| Vitalité Culturelle | Équipe |
-| Immobilier | Équipe |
-| Vélib | Équipe |
-| Canicule | Équipe |
-| AccessScore | DZjeff05 (intégré depuis `dev-score-access`) |
