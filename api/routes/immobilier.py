@@ -1,21 +1,29 @@
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
-from sqlalchemy import text
+from fastapi import APIRouter, HTTPException, Request, Depends
 
-from pipeline.db import get_engine
+from pipeline.db import get_mongo_client
+from api.security import limiter, require_api_key
 
-router = APIRouter(prefix="/indicators/immobilier", tags=["Immobilier"])
+router = APIRouter(
+    prefix="/indicators/immobilier",
+    tags=["Immobilier"],
+    dependencies=[Depends(require_api_key)],
+)
 
 _GEOJSON_PATH = Path(__file__).parents[2] / "data" / "referentiel" / "arrondissements.geojson"
+
+
+def _get_gold_collection(name: str):
+    return get_mongo_client()["paris_gold"][name]
 
 
 @router.get("/arrondissements", summary="Score immobilier par arrondissement (GeoJSON)")
 def get_arrondissements():
     """
     Retourne un GeoJSON choroplèthe : contours des arrondissements enrichis
-    avec score, prix m², évolution, ratio accessibilité.
+    avec score, prix m², évolution, ratio accessibilité (Gold depuis MongoDB).
     """
     try:
         with open(_GEOJSON_PATH) as f:
@@ -24,36 +32,30 @@ def get_arrondissements():
         raise HTTPException(status_code=503, detail="Fichier GeoJSON arrondissements introuvable")
 
     try:
-        engine = get_engine()
-        with engine.connect() as conn:
-            rows = conn.execute(text("""
-                SELECT code_insee, score, prix_m2_median, evolution_1an_pct,
-                       nb_logements_sociaux, revenu_median, ratio_accessibilite, details
-                FROM gold.immo_arrondissement
-            """)).fetchall()
+        docs = list(_get_gold_collection("immo_arrondissement").find({}, {"_id": 0}))
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
 
     # Indexer par string ET int pour matcher quelle que soit la forme
     scores = {}
-    for row in rows:
-        scores[str(row.code_insee)] = row
-        scores[int(row.code_insee)] = row
+    for doc in docs:
+        scores[str(doc["code_insee"])] = doc
+        scores[int(doc["code_insee"])] = doc
 
     for i, feature in enumerate(geojson["features"]):
-        feature["id"] = i   # requis pour setFeatureState MapLibre
+        feature["id"] = i
         code = feature["properties"].get("c_arinsee")
         if code is not None and code in scores:
-            row = scores[code]
-            details = json.loads(row.details) if row.details else {}
+            doc = scores[code]
+            details = json.loads(doc["details"]) if isinstance(doc.get("details"), str) else doc.get("details", {})
             feature["properties"].update({
-                "score":                float(row.score),
-                "prix_m2_median":       float(row.prix_m2_median),
-                "evolution_1an_pct":    float(row.evolution_1an_pct),
-                "nb_logements_sociaux": int(row.nb_logements_sociaux),
-                "revenu_median":        int(row.revenu_median),
-                "ratio_accessibilite":  float(row.ratio_accessibilite),
-                **details,
+                "score":                float(doc.get("score", 0)),
+                "prix_m2_median":       float(doc.get("prix_m2_median", 0)),
+                "evolution_1an_pct":    float(doc.get("evolution_1an_pct", 0)),
+                "nb_logements_sociaux": int(doc.get("nb_logements_sociaux", 0)),
+                "revenu_median":        int(doc.get("revenu_median", 0)),
+                "ratio_accessibilite":  float(doc.get("ratio_accessibilite", 0)),
+                **(details if isinstance(details, dict) else {}),
             })
 
     return geojson
@@ -61,28 +63,24 @@ def get_arrondissements():
 
 @router.get("/evolution", summary="Évolution prix m² par arrondissement")
 def get_evolution():
-    """Série temporelle prix m² médian par arrondissement (2020–2024)."""
+    """Série temporelle prix m² médian par arrondissement (Gold depuis MongoDB)."""
     try:
-        engine = get_engine()
-        with engine.connect() as conn:
-            rows = conn.execute(text("""
-                SELECT code_insee, annee, prix_m2_median, nb_transactions
-                FROM gold.immo_evolution
-                ORDER BY code_insee, annee
-            """)).fetchall()
+        docs = list(_get_gold_collection("immo_evolution").find({}, {"_id": 0}))
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-    # Grouper par arrondissement
     result = {}
-    for row in rows:
-        code = row.code_insee
+    for doc in docs:
+        code = doc["code_insee"]
         if code not in result:
             result[code] = {"code_insee": code, "series": []}
         result[code]["series"].append({
-            "annee":          int(row.annee),
-            "prix_m2_median": float(row.prix_m2_median),
-            "nb_transactions":int(row.nb_transactions),
+            "annee":           int(doc["annee"]),
+            "prix_m2_median":  float(doc["prix_m2_median"]),
+            "nb_transactions": int(doc["nb_transactions"]),
         })
+
+    for entry in result.values():
+        entry["series"].sort(key=lambda x: x["annee"])
 
     return list(result.values())

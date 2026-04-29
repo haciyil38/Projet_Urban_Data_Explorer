@@ -23,6 +23,10 @@ MONGO_URL   = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
 # --- Arrondissements Paris (codes INSEE) ---
 ARRONDISSEMENTS = [f"750{str(i).zfill(2)}" for i in range(1, 21)]
 
+# --- Sécurité API ---
+API_KEY         = os.getenv("API_KEY", "urban-data-explorer-2024")
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:8080,http://localhost:8080").split(",")
+
 # --- Limite API OpenDataSoft (max offset) ---
 MAX_OFFSET = 9900
 
@@ -57,11 +61,12 @@ WEIGHTS_ACCESS = {
 
 # =============================================================================
 # INDICATEUR 3 — Indice de Confort Caniculaire
+# Sources : îlots fraîcheur équipements + espaces verts frais + fontaines + arbres
 # =============================================================================
 WEIGHTS_CANICULAIRE = {
-    "refuges_frais":      0.35,
-    "couverture_arboree": 0.35,
-    "lst":                0.30,
+    "refuges_frais":      0.35,   # îlots équipements + espaces verts frais + fontaines
+    "couverture_arboree": 0.35,   # arbres géolocalisés (densité × circonférence)
+    "lst":                0.30,   # température de surface estivale ERA5-Land (Copernicus)
 }
 
 # =============================================================================

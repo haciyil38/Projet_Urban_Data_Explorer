@@ -1,4 +1,5 @@
 const API_BASE = "http://localhost:8000";
+const API_HEADERS = { "X-API-Key": "urban-data-explorer-2024" };
 
 // ── Carte ──────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,9 @@ const CATEGORY_COLORS = {
 let currentMarker = null;
 let currentCircle = null;
 let currentRadius = 500;
+
+// Onglet actif — mis à jour par immo.js lors des changements d'onglet
+let activeTab = "immo";
 
 // ── UI refs ────────────────────────────────────────────────────────────────
 
@@ -64,11 +68,52 @@ radiusInput.addEventListener("input", () => {
 // ── Clic carte ─────────────────────────────────────────────────────────────
 
 map.on("click", (e) => {
-  if (document.getElementById("tab-culture").classList.contains("hidden")) return;
+  if (activeTab === "immo") return;
   const { lng, lat } = e.lngLat;
   placeMarker(lat, lng);
   updateCircle(lat, lng, currentRadius);
-  fetchScore(lat, lng, currentRadius);
+
+  if (activeTab === "culture")        fetchScore(lat, lng, currentRadius);
+  else if (activeTab === "velib")    fetchVelib(lat, lng, currentRadius);
+  else if (activeTab === "canicule") fetchCanicule(lat, lng, currentRadius);
+  else if (activeTab === "access")   fetchAccess(lat, lng, currentRadius);
+
+  fetchAllScores(lat, lng, currentRadius);
+});
+
+// ── Scores résumé (toujours visibles) ─────────────────────────────────────
+
+async function fetchAllScores(lat, lng, radiusM) {
+  const urls = [
+    `${API_BASE}/indicators/vitalite-culturelle?lat=${lat}&lon=${lng}&radius_m=${radiusM}`,
+    `${API_BASE}/indicators/velib?lat=${lat}&lon=${lng}&radius_m=${radiusM}`,
+    `${API_BASE}/indicators/canicule?lat=${lat}&lon=${lng}&radius_m=${radiusM}`,
+    `${API_BASE}/indicators/accessibilite-services?lat=${lat}&lon=${lng}&radius=${radiusM}`,
+  ];
+  const ids = ["sum-culture", "sum-velib", "sum-canicule", "sum-access"];
+
+  const results = await Promise.allSettled(
+    urls.map(url => fetch(url, { headers: API_HEADERS }).then(r => r.ok ? r.json() : Promise.reject(r.status)))
+  );
+
+  results.forEach((res, i) => {
+    const el = document.getElementById(ids[i]);
+    if (res.status === "fulfilled") {
+      const score = res.value.score;
+      el.textContent = score.toFixed(1);
+      el.style.color = scoreColor(score);
+      el.classList.add("loaded");
+    }
+  });
+}
+
+// Clic sur une carte résumé → active l'onglet correspondant
+document.querySelectorAll(".summary-card").forEach(card => {
+  card.addEventListener("click", () => {
+    const tab = card.dataset.tab;
+    const btn = document.querySelector(`.tab[data-tab="${tab}"]`);
+    if (btn) btn.click();
+  });
 });
 
 // ── Marker ─────────────────────────────────────────────────────────────────
@@ -78,6 +123,22 @@ function placeMarker(lat, lng) {
   currentMarker = new maplibregl.Marker({ color: "#4f46e5" })
     .setLngLat([lng, lat])
     .addTo(map);
+}
+
+function hideCultureOverlays() {
+  if (currentMarker) currentMarker.remove();
+  if (map.getSource("radius-circle")) {
+    map.setLayoutProperty("radius-fill",    "visibility", "none");
+    map.setLayoutProperty("radius-outline", "visibility", "none");
+  }
+}
+
+function showCultureOverlays() {
+  if (currentMarker) currentMarker.addTo(map);
+  if (map.getSource("radius-circle")) {
+    map.setLayoutProperty("radius-fill",    "visibility", "visible");
+    map.setLayoutProperty("radius-outline", "visibility", "visible");
+  }
 }
 
 // ── Cercle de rayon ────────────────────────────────────────────────────────
@@ -125,7 +186,7 @@ async function fetchScore(lat, lng, radiusM) {
 
   try {
     const url = `${API_BASE}/indicators/vitalite-culturelle?lat=${lat}&lon=${lng}&radius_m=${radiusM}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: API_HEADERS });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     renderResult(data);
@@ -182,7 +243,7 @@ async function loadLayer(cat) {
     return;
   }
 
-  const res = await fetch(`${API_BASE}/indicators/vitalite-culturelle/points?categorie=${cat}`);
+  const res = await fetch(`${API_BASE}/indicators/vitalite-culturelle/points?categorie=${cat}`, { headers: API_HEADERS });
   const geojson = await res.json();
 
   map.addSource(`src-${cat}`, { type: "geojson", data: geojson });
@@ -221,8 +282,8 @@ function hideLayer(cat) {
 
 // Aucune couche chargée par défaut
 
-// Toggle boutons
-document.querySelectorAll(".layer-btn").forEach((btn) => {
+// Toggle boutons (uniquement onglet culture)
+document.querySelectorAll("#tab-culture .layer-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     const cat = btn.dataset.cat;
     const isActive = btn.classList.toggle("active");

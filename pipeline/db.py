@@ -176,3 +176,29 @@ def load_to_gold(df: pd.DataFrame, table_name: str, if_exists: str = "replace"):
 def read_gold(table_name: str) -> pd.DataFrame:
     """Lit une table du schéma gold."""
     return pd.read_sql(f"SELECT * FROM gold.{table_name}", get_engine())
+
+
+# --- Helpers Gold MongoDB ---
+
+def load_to_mongo_gold(df: pd.DataFrame, collection_name: str, if_exists: str = "replace"):
+    """Charge un DataFrame dans MongoDB (Gold — indicateurs finaux)."""
+    if df.empty:
+        print(f"  [SKIP] {collection_name} — DataFrame vide")
+        return
+    client = get_mongo_client()
+    db = client["paris_gold"]
+    collection = db[collection_name]
+    if if_exists == "replace":
+        collection.drop()
+    records = df.where(pd.notnull(df), None).to_dict(orient="records")
+    if records:
+        collection.insert_many(records)
+    print(f"  → mongodb.paris_gold.{collection_name} : {len(records)} documents chargés")
+
+
+def read_mongo_gold(collection_name: str) -> pd.DataFrame:
+    """Lit une collection MongoDB Gold et la retourne en DataFrame."""
+    client = get_mongo_client()
+    db = client["paris_gold"]
+    cursor = db[collection_name].find({}, {"_id": 0})
+    return pd.DataFrame(list(cursor))

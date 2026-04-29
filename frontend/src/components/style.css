@@ -170,6 +170,45 @@ body {
   color: #fff;
 }
 
+/* ── Summary cards ── */
+#scores-summary {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.summary-card {
+  flex: 1;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 8px 4px 6px;
+  text-align: center;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.summary-card:hover { background: #f0f0f0; }
+
+.summary-card.active { border-color: var(--card-c, #4f46e5); }
+
+.summary-label {
+  font-size: 0.68rem;
+  color: #888;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary-score {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #bbb;
+}
+
+.summary-score.loaded { color: var(--card-c, #4f46e5); }
+
 /* ── Hint ── */
 .hint {
   font-size: 0.82rem;
@@ -291,4 +330,56 @@ body {
   color: #dc2626;
   padding: 8px 0;
   text-align: center;
+}
+
+/* ── Vélib — barre de score couleur bleue ── */
+.velib-bar::after {
+  background: #0284c7 !important;
+}
+
+/* ── Vélib — légende disponibilité ── */
+.velib-legend {
+  font-size: 0.72rem;
+  color: #666;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.velib-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+
+/* ── Canicule — barre de score couleur orange ── */
+.canicule-bar::after {
+  background: #f97316 !important;
+}
+
+/* ── Access — barres colorées par catégorie ── */
+.access-bar::after {
+  background: var(--c, #0891b2) !important;
+}
+
+/* ── Select profil ── */
+#profile-select {
+  flex: 1;
+  padding: 4px 6px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #333;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+}
+
+#profile-select:focus {
+  border-color: #0891b2;
 }

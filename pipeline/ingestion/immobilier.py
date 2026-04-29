@@ -16,7 +16,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from pipeline.db import init_schemas, load_to_mongo_bronze
+from pipeline.db import init_schemas, load_to_bronze
 
 _BRONZE_DIR = Path(__file__).parents[2] / "data" / "bronze"
 
@@ -25,7 +25,7 @@ _ARRONDISSEMENTS_INSEE = [f"751{str(i).zfill(2)}" for i in range(1, 21)]
 
 # CSV DVF par département sur data.gouv.fr — 1 fichier par année, stable
 _DVF_BASE  = "https://files.data.gouv.fr/geo-dvf/latest/csv/{annee}/departements/75.csv.gz"
-_DVF_YEARS = [2020, 2021, 2022, 2023, 2024]
+_DVF_YEARS = [2021, 2022, 2023, 2024, 2025]
 
 # RPLS — API DiDo SDES (logements sociaux, France entière, filtre DEP_CODE=75)
 _RPLS_URL = "https://data.statistiques.developpement-durable.gouv.fr/dido/api/v1/datafiles/f3c2f2cb-8fb1-40fd-8733-964247744c9a/csv"
@@ -190,15 +190,15 @@ def run():
 
     print("\n[1/3] DVF — Transactions immobilières")
     df = fetch_dvf()
-    load_to_mongo_bronze(df, "dvf_paris")
+    load_to_bronze(df, "dvf_paris")
 
     print("\n[2/3] RPLS — Logements sociaux")
     df = fetch_logements_sociaux()
-    load_to_mongo_bronze(df, "logements_sociaux")
+    load_to_bronze(df, "logements_sociaux")
 
     print("\n[3/3] INSEE Filosofi — Revenus médians")
     df = fetch_revenus_insee()
-    load_to_mongo_bronze(df, "revenus_insee")
+    load_to_bronze(df, "revenus_insee")
 
 
 if __name__ == "__main__":
