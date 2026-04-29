@@ -165,10 +165,42 @@ def _sync_stats_to_mongo():
         load_to_mongo_gold(df, "vitalite_stats_reference")
 
 
+def _sync_scores_to_mongo(radius_m: float = 1000.0):
+    """Pré-calcule le score vitalité au centroïde de chaque arrondissement → MongoDB Gold."""
+    from datetime import datetime, timezone
+    engine = get_engine()
+    with engine.connect() as conn:
+        rows = conn.execute(text(
+            "SELECT arrondissement, centroid_lat, centroid_lon "
+            "FROM silver.canicule_par_arrondissement ORDER BY arrondissement"
+        )).fetchall()
+
+    if not rows:
+        print("  [SKIP] silver.canicule_par_arrondissement vide — sync vitalité MongoDB ignorée")
+        return
+
+    computed_at = datetime.now(timezone.utc).isoformat()
+    records = []
+    for row in rows:
+        try:
+            result = compute(lat=row.centroid_lat, lon=row.centroid_lon, radius_m=radius_m)
+            result["arrondissement"] = row.arrondissement
+            result["computed_at"] = computed_at
+            records.append(result)
+        except Exception as e:
+            print(f"  [WARN] {row.arrondissement} : {e}")
+
+    if records:
+        df = pd.DataFrame(records)
+        load_to_mongo_gold(df, "vitalite_arrondissement")
+        print(f"  → mongodb.paris_gold.vitalite_arrondissement : {len(records)} arrondissements")
+
+
 def setup():
     """Installe la fonction SQL gold et synchronise les stats vers MongoDB."""
     _create_gold_function()
     _sync_stats_to_mongo()
+    _sync_scores_to_mongo()
 
 
 if __name__ == "__main__":

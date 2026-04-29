@@ -9,8 +9,11 @@
 #          Si LST absente : redistribution 50/50.
 # =============================================================================
 
+from datetime import datetime, timezone
+
+import pandas as pd
 from sqlalchemy import text
-from pipeline.db import get_engine, init_schemas
+from pipeline.db import get_engine, init_schemas, load_to_mongo_gold
 
 
 _SQL_FUNCTION = """
@@ -142,6 +145,36 @@ $$ LANGUAGE plpgsql;
 """
 
 
+def _sync_scores_to_mongo(radius_m: float = 1000.0):
+    """Pré-calcule le score canicule au centroïde de chaque arrondissement → MongoDB Gold."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        rows = conn.execute(text(
+            "SELECT arrondissement, centroid_lat, centroid_lon "
+            "FROM silver.canicule_par_arrondissement ORDER BY arrondissement"
+        )).fetchall()
+
+    if not rows:
+        print("  [SKIP] silver.canicule_par_arrondissement vide — sync MongoDB ignorée")
+        return
+
+    computed_at = datetime.now(timezone.utc).isoformat()
+    records = []
+    for row in rows:
+        try:
+            result = compute(lat=row.centroid_lat, lon=row.centroid_lon, radius_m=radius_m)
+            result["arrondissement"] = row.arrondissement
+            result["computed_at"] = computed_at
+            records.append(result)
+        except Exception as e:
+            print(f"  [WARN] {row.arrondissement} : {e}")
+
+    if records:
+        df = pd.DataFrame(records)
+        load_to_mongo_gold(df, "canicule_arrondissement")
+        print(f"  → mongodb.paris_gold.canicule_arrondissement : {len(records)} arrondissements")
+
+
 def setup():
     engine = get_engine()
     with engine.connect() as conn:
@@ -150,6 +183,7 @@ def setup():
         conn.execute(text(_SQL_FUNCTION))
         conn.commit()
     print("  Fonction gold.score_canicule créée / mise à jour.")
+    _sync_scores_to_mongo()
 
 
 def compute(lat: float, lon: float, radius_m: float) -> dict:

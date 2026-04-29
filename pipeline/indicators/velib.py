@@ -14,8 +14,11 @@
 #     → 50  = moitié des vélos disponibles en moyenne
 # =============================================================================
 
+from datetime import datetime, timezone
+
+import pandas as pd
 from sqlalchemy import text
-from pipeline.db import get_engine
+from pipeline.db import get_engine, load_to_mongo_gold
 
 # Surface approximative de la zone métropole couverte par Vélib (~750 km²)
 METRO_AREA_M2 = 750_000_000.0
@@ -145,9 +148,40 @@ def compute(lat: float, lon: float, radius_m: float = 500) -> dict:
     }
 
 
+def _sync_scores_to_mongo(radius_m: float = 1000.0):
+    """Pré-calcule le score Vélib au centroïde de chaque arrondissement → MongoDB Gold."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        rows = conn.execute(text(
+            "SELECT arrondissement, centroid_lat, centroid_lon "
+            "FROM silver.canicule_par_arrondissement ORDER BY arrondissement"
+        )).fetchall()
+
+    if not rows:
+        print("  [SKIP] silver.canicule_par_arrondissement vide — sync Vélib MongoDB ignorée")
+        return
+
+    computed_at = datetime.now(timezone.utc).isoformat()
+    records = []
+    for row in rows:
+        try:
+            result = compute(lat=row.centroid_lat, lon=row.centroid_lon, radius_m=radius_m)
+            result["arrondissement"] = row.arrondissement
+            result["computed_at"] = computed_at
+            records.append(result)
+        except Exception as e:
+            print(f"  [WARN] {row.arrondissement} : {e}")
+
+    if records:
+        df = pd.DataFrame(records)
+        load_to_mongo_gold(df, "velib_arrondissement")
+        print(f"  → mongodb.paris_gold.velib_arrondissement : {len(records)} arrondissements")
+
+
 def setup():
-    """Crée la fonction gold si elle n'existe pas encore (appelé au démarrage de l'API)."""
+    """Crée la fonction gold et synchronise les scores par arrondissement vers MongoDB."""
     _create_gold_function()
+    _sync_scores_to_mongo()
 
 
 def run():

@@ -270,10 +270,13 @@ Toutes les routes sont protégées par :
 
 | Base | Collection | Contenu |
 |---|---|---|
-| `paris_gold` | `immobilier_arrondissements` | Scores immobiliers par arrondissement |
-| `paris_gold` | `immobilier_evolution` | Séries temporelles prix m² |
-| `paris_gold` | `vitalite_stats_reference` | Statistiques de référence Paris |
-| `paris_gold` | `access_par_arrondissement` | AccessScore (profil standard, rayon 1 km) par arrondissement |
+| `paris_gold` | `immo_arrondissement` | Scores immobiliers par arrondissement |
+| `paris_gold` | `immo_evolution` | Séries temporelles prix m² |
+| `paris_gold` | `vitalite_stats_reference` | Statistiques de référence Paris (totaux pour normalisation) |
+| `paris_gold` | `vitalite_arrondissement` | Score vitalité culturelle par arrondissement (rayon 1 km) |
+| `paris_gold` | `canicule_arrondissement` | Score confort caniculaire par arrondissement (rayon 1 km) |
+| `paris_gold` | `velib_arrondissement` | Score Vélib par arrondissement (rayon 1 km) |
+| `paris_gold` | `access_par_arrondissement` | AccessScore par arrondissement (profil standard, rayon 1 km) |
 
 ---
 
