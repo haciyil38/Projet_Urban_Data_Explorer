@@ -6,6 +6,8 @@ pyarrow>=14.0
 sqlalchemy>=2.0
 psycopg2-binary>=2.9
 geopandas>=0.14
+xarray>=2023.0
+netCDF4>=1.6
 
 # API backend
 fastapi>=0.110
